@@ -1,0 +1,25 @@
+{
+  "season": 2026,
+  "me": "Losmika",
+  "leagues": [
+    { "name": "The Tribe Has Spoken", "id": "1319043221740879872" },
+    { "name": "Redzone Royalty", "id": "1319043194805026816" },
+    { "name": "Up The Ante", "id": "1319043167449800704" },
+    { "name": "Bell Cow", "id": "1319043137317912576" },
+    { "name": "Pocket Presence", "id": "1319043103859957760" },
+    { "name": "Blitzkrieg", "id": "1319043072503345152" }
+  ],
+  "toc": {
+    "startWeek": 5,
+    "note": "Brackets at the start of startWeek. After that the script applies the rule: lowest survival score is demoted, lowest revival score is eliminated, each week.",
+    "survival": ["mcnutton","Losmika","HereForBeeerr","MoHegazy","bhatman8","AdithyaGowda","eatmycakes21","Brentlee93","JackEureka","ajd12","Gusbuster93","zswalker5","Urman1","gpryce"],
+    "revival": ["Ramathorne","WAFFT","geojag","Snaggler7"],
+    "eliminated": [ { "owner": "VanceGarren28", "total": 273.53 }, { "owner": "zcamloh11", "total": 571.93 } ],
+    "cumBefore": {
+      "mcnutton": 709.84, "Losmika": 680.97, "HereForBeeerr": 679.63, "MoHegazy": 661.73, "bhatman8": 661.62,
+      "AdithyaGowda": 652.19, "eatmycakes21": 634.63, "Brentlee93": 622.22, "JackEureka": 599.96, "ajd12": 595.91,
+      "Gusbuster93": 592.17, "zswalker5": 591.32, "Urman1": 584.14, "gpryce": 564.29,
+      "Ramathorne": 582.61, "WAFFT": 539.95, "geojag": 533.57, "Snaggler7": 522.77
+    }
+  }
+}
