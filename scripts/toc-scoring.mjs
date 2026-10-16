@@ -1,16 +1,43 @@
 // ToC best-ball scoring: player points from raw NFL stats, then the best lineup for a roster.
+// Every rule here is tied to a quoted bylaws line in scripts/audit/bylaws-scorer.mjs (the independent copy).
 export const SLOTS = ['QB', 'RB', 'RB', 'WR', 'WR', 'TE', 'FLEX', 'FLEX', 'FLEX', 'SF'];
 const ELIGIBLE = { QB: ['QB'], RB: ['RB'], WR: ['WR'], TE: ['TE'], FLEX: ['RB', 'WR', 'TE'], SF: ['QB', 'RB', 'WR', 'TE'] };
 
-export function scorePlayer(stat, pos) {
+// Interpretations the bylaws leave open. Defaults are the literal reading of the bylaws text.
+//  qbReceptionPoints : points per reception for a QB (bylaws list RB/WR = 1 and TE = 2, QB not listed -> 0)
+//  combined100Bonus  : also give +2 when rushing+receiving yards together reach 100 (Format list says "100+ Rushing/Receiving Yards")
+export const DEFAULT_RULES = { qbReceptionPoints: 0, combined100Bonus: false };
+
+const r2 = n => Math.round(n * 100) / 100;
+const OTHER_TD_KEYS = ['fum_rec_td', 'kr_td', 'pr_td', 'st_td', 'blk_kick_ret_td'];
+
+// Returns { pts, parts:[{label, qty, pts}] } so every number can be shown with its working.
+export function scoreDetail(stat, pos, rules = DEFAULT_RULES) {
   const g = k => Number((stat && stat[k]) || 0);
-  let p = 0.04 * g('pass_yd') + 6 * g('pass_td') - 2 * g('pass_int') + (g('pass_yd') >= 300 ? 2 : 0);
-  p += 0.1 * g('rush_yd') + 6 * g('rush_td') + 0.25 * g('rush_att') + (g('rush_yd') >= 100 ? 2 : 0);
-  p += 0.1 * g('rec_yd') + 6 * g('rec_td') + (g('rec_yd') >= 100 ? 2 : 0);
-  if (pos === 'RB' || pos === 'WR' || pos === 'TE') p += g('rec') * (pos === 'TE' ? 2 : 1);
-  p += 2 * (g('pass_2pt') + g('rush_2pt') + g('rec_2pt')) - 2 * g('fum_lost') + 6 * g('fum_rec_td');
-  return Math.round(p * 100) / 100;
+  const parts = [];
+  const add = (label, qty, pts) => { if (qty) parts.push({ label, qty, pts: r2(pts) }); };
+  add('Passing yards', g('pass_yd'), 0.04 * g('pass_yd'));
+  add('Passing TD', g('pass_td'), 6 * g('pass_td'));
+  add('Interceptions', g('pass_int'), -2 * g('pass_int'));
+  if (g('pass_yd') >= 300) add('300+ passing yards bonus', 1, 2);
+  add('Rushing yards', g('rush_yd'), 0.1 * g('rush_yd'));
+  add('Carries', g('rush_att'), 0.25 * g('rush_att'));
+  add('Rushing TD', g('rush_td'), 6 * g('rush_td'));
+  if (g('rush_yd') >= 100) add('100+ rushing yards bonus', 1, 2);
+  add('Receiving yards', g('rec_yd'), 0.1 * g('rec_yd'));
+  add('Receiving TD', g('rec_td'), 6 * g('rec_td'));
+  if (g('rec_yd') >= 100) add('100+ receiving yards bonus', 1, 2);
+  if (rules.combined100Bonus && g('rush_yd') < 100 && g('rec_yd') < 100 && g('rush_yd') + g('rec_yd') >= 100) add('100+ rushing/receiving combined bonus', 1, 2);
+  const perRec = pos === 'TE' ? 2 : (pos === 'RB' || pos === 'WR') ? 1 : (rules.qbReceptionPoints || 0);
+  add(`Receptions (${perRec} each)`, g('rec'), perRec * g('rec'));
+  const twoPt = g('pass_2pt') + g('rush_2pt') + g('rec_2pt');
+  add('2-point conversions', twoPt, 2 * twoPt);
+  add('Fumbles lost', g('fum_lost'), -2 * g('fum_lost'));
+  const otherTd = OTHER_TD_KEYS.reduce((s, k) => s + g(k), 0);
+  add('Fumble-recovery / other TD', otherTd, 6 * otherTd);
+  return { pts: r2(parts.reduce((s, x) => s + x.pts, 0)), parts };
 }
+export const scorePlayer = (stat, pos, rules = DEFAULT_RULES) => scoreDetail(stat, pos, rules).pts;
 
 // Hungarian algorithm (minimum cost), 1-indexed square matrix.
 function hungarian(a, n) {
@@ -36,7 +63,7 @@ function hungarian(a, n) {
   return rowToCol;
 }
 
-// players: [{id, name, pos, pts}] -> {total, lineup: [{slot, id, name, pos, pts}]}
+// players: [{id, name, pos, pts, ...extra}] -> {total, lineup: [{slot, id, name, pos, pts, ...extra}]}
 export function bestBall(players) {
   const rows = SLOTS.length, size = Math.max(rows, players.length), BIG = 1000, BAD = 1e6;
   const a = Array.from({ length: size + 1 }, () => Array(size + 1).fill(0));
@@ -48,7 +75,7 @@ export function bestBall(players) {
   const lineup = []; let total = 0;
   for (let i = 0; i < rows; i++) {
     const j = r2c[i + 1] - 1, pl = players[j];
-    if (pl && ELIGIBLE[SLOTS[i]].includes(pl.pos)) { lineup.push({ slot: SLOTS[i], id: pl.id, name: pl.name, pos: pl.pos, pts: pl.pts }); total += pl.pts; }
+    if (pl && ELIGIBLE[SLOTS[i]].includes(pl.pos)) { lineup.push({ ...pl, slot: SLOTS[i] }); total += pl.pts; }
     else lineup.push({ slot: SLOTS[i], id: null, name: 'Empty', pos: '', pts: 0 });
   }
   return { total: Math.round(total * 100) / 100, lineup };
