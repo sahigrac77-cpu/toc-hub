@@ -104,10 +104,12 @@ html{color-scheme:light}body{margin:0}
 <nav class="tabs" role="tablist" aria-label="Sections">
   <button role="tab" data-t="toc">ToC Week 5</button>
   <button role="tab" data-t="leagues">Sub-leagues</button>
+  <button role="tab" data-t="power">League power rankings</button>
+  <button role="tab" data-t="spower">Survival power rankings</button>
+  <button role="tab" data-t="legacy">Legacy score</button>
   <button role="tab" data-t="awards">Awards &amp; races</button>
   <button role="tab" data-t="teams">Find a team</button>
   <button role="tab" data-t="bylaws">Bylaws</button>
-  <button role="tab" data-t="verify">Verification</button>
   <button class="theme" id="themeBtn" aria-label="Toggle theme">Theme</button>
 </nav>
 
@@ -116,9 +118,11 @@ html{color-scheme:light}body{margin:0}
 <section class="view" id="v-awards" hidden></section>
 <section class="view" id="v-teams" hidden></section>
 <section class="view bylaw" id="v-bylaws" hidden></section>
-<section class="view" id="v-verify" hidden></section>
+<section class="view" id="v-power" hidden></section>
+<section class="view" id="v-spower" hidden></section>
+<section class="view" id="v-legacy" hidden></section>
 
-<div class="foot note">Data comes from the six Sleeper sub-leagues and NFL stats via Sleeper, refreshed automatically. ToC scores are recalculated from raw stats with the ToC bylaws scoring, so they can differ from the commissioner’s sheet; the Verification tab shows where and why. This is an unofficial companion. The bylaws document and the commissioner decide anything disputed.</div>
+<div class="foot note">Data comes from the six Sleeper sub-leagues and NFL stats via Sleeper, refreshed automatically. ToC scores are recalculated from raw stats with the ToC bylaws scoring, so they can differ from the commissioner’s sheet. This is an unofficial companion. The bylaws document and the commissioner decide anything disputed.</div>
 </div>
 
 <script>
@@ -172,17 +176,10 @@ function revivalTable(rows, W){
 function verdictBox(W){
   const v = W.verdict || {state:W.final?'stands':'live',reasons:[]};
   const res = [W.demoted?`<b>${esc(W.demoted)}</b> demoted`:'', W.eliminated?`<b>${esc(W.eliminated)}</b> eliminated`:''].filter(Boolean).join(' · ');
-  const head = {final:'Final.', stands:'Stands under stated assumptions.', provisional:'Provisional, not safe to call yet.', live:'Live.'}[v.state];
+  const head = {final:'Final.', stands:'', provisional:'Provisional, not safe to call yet.', live:'Live.'}[v.state];
   const lead = v.state==='live' ? 'Games are still being played, so scores and the order will change. The last row in each table is the lowest right now, not a result.' : (res?res+'.':'No demotion or elimination this week.');
   const cls = v.state==='final' ? 'ok' : v.state==='provisional' ? 'warnb' : '';
-  return `<div class="status ${cls}"><div><b>${head}</b> ${lead}${v.reasons.length?`<ul class="why">${v.reasons.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}<span class="mini">How this was checked, and the rules still waiting for the commissioner: <a href="#verify" data-goto="verify">Verification tab</a>.</span></div></div>`;
-}
-function variantsBox(W){
-  if(!W.variants||!W.final) return '';
-  const rows = W.variants.map(v=>v.unavailable
-    ? `<tr><td>${esc(v.label)}</td><td colspan="3">Not tested: transaction history was unavailable.</td></tr>`
-    : `<tr><td>${esc(v.label)}</td><td>${esc(v.demoted||'—')}</td><td>${esc(v.eliminated||'—')}</td><td>${v.flips?'<span class="chip bad">Changes the result</span>':'<span class="chip good">Same result</span>'}${v.moved.length?` <span class="mini">${v.moved.map(m=>esc(m.owner)+' '+(m.delta>0?'+':'')+f2(m.delta)).join(', ')}</span>`:''}</td></tr>`).join('');
-  return `<h2>If the unclear rules were read differently</h2><p class="lede">The bylaws do not settle these points. Each row re-scores the week under another reading and shows who would be demoted and eliminated.</p><div class="tablebox"><table><thead><tr><th>If…</th><th>Demoted</th><th>Eliminated</th><th>Effect</th></tr></thead><tbody><tr><td>The bylaws are read literally (used above)</td><td>${esc(W.demoted||'—')}</td><td>${esc(W.eliminated||'—')}</td><td></td></tr>${rows}</tbody></table></div>`;
+  return `<div class="status ${cls}"><div><b>${head?head+'</b> ':'</b>'}${lead}${v.reasons.length&&v.state!=='stands'?`<ul class="why">${v.reasons.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}</div></div>`;
 }
 function renderToc(){
   const T = D.toc, ws = Object.keys(T.weeks).map(Number).sort((a,b)=>a-b);
@@ -200,7 +197,6 @@ function renderToc(){
   <h2>Revival bracket <span class="chip">${r.length} teams · lowest score is eliminated</span></h2>
   <p class="lede">Click a row to see the lineup and the working.</p>
   ${r.length?revivalTable(r,W):'<p class="note">No teams in this bracket.</p>'}
-  ${variantsBox(W)}
   <p class="note">Eliminated so far: ${T.eliminated.map(e=>`${esc(e.owner)} (${f2(e.total)})${e.provisional?' <span class="chip warn">provisional</span>':''}`).join(', ')||'none'}. Weekly scores decide who drops, not the total. Amber rows finished within 5 points of last place.</p>`;
   el.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{tocWeek=Number(b.dataset.w);renderToc()}));
   el.querySelectorAll('tr.row').forEach(tr=>tr.addEventListener('click',()=>{const e=$('#lu-'+tr.dataset.k);e.hidden=!e.hidden}));
@@ -280,7 +276,7 @@ function showTeam(o){
 const BY = [
  ['League format',`<ul><li>Six 14-team sub-leagues, 84 teams total. Entry fee is $40 per year, paid through LeagueSafe.</li><li>Each week every team plays a head-to-head game and a league-median game.</li><li>Sub-league playoffs run Weeks 15–17 for the top 6 by record, with max points breaking ties. Seeds 1 and 2 get a bye, and the championship is in Week 17.</li></ul>`],
  ['Tournament of Champions',`<ul><li>The top 3 teams in each sub-league qualify for next season’s ToC: 18 teams.</li><li>The six 4th-place teams play a Week 1 qualifier. The top 2 scorers join the 18 for a 20-team field.</li><li>ToC is survivor-style best ball. The bracket narrows weekly to one team by Week 16. Each week the lowest scorer in the survival bracket is demoted to the revival bracket, and the lowest in the revival bracket is eliminated.</li><li>In Week 17 the survival champion plays the revival champion.</li><li>The startup ToC includes all 84 teams in a purge format, with a three-team final in Week 17.</li></ul>`],
- ['Scoring and roster (ToC)',`<ul><li>Passing, rushing and receiving yards and touchdowns, receptions, carries, a tight end premium, turnover penalties, yardage bonuses and two-point conversions. Best ball.</li><li>Lineup: 1 QB, 2 RB, 2 WR, 1 TE, 3 Flex, 1 Superflex. Roster also has 8 bench, 2 IR and 3 taxi spots (taxi for players up to 2 years).</li><li>Values used on this site: 0.04 per pass yard, 6 per touchdown, −2 per interception, +2 for 300 pass yards; 0.1 per rush or receiving yard, 0.25 per carry, +2 for 100 rush or 100 receiving yards; 1 point per reception (2 for a tight end); +2 per two-point conversion; −2 per lost fumble.  Where the commissioner’s sheet differs, the Verification tab lists every player and the reason.</li></ul>`],
+ ['Scoring and roster (ToC)',`<ul><li>Passing, rushing and receiving yards and touchdowns, receptions, carries, a tight end premium, turnover penalties, yardage bonuses and two-point conversions. Best ball.</li><li>Lineup: 1 QB, 2 RB, 2 WR, 1 TE, 3 Flex, 1 Superflex. Roster also has 8 bench, 2 IR and 3 taxi spots (taxi for players up to 2 years).</li><li>Values used on this site: 0.04 per pass yard, 6 per touchdown, −2 per interception, +2 for 300 pass yards; 0.1 per rush or receiving yard, 0.25 per carry, +2 for 100 rush or 100 receiving yards; 1 point per reception (2 for a tight end); +2 per two-point conversion; −2 per lost fumble.</li></ul>`],
  ['Drafts and trades',`<ul><li>Startup drafts are 4-hour slow snake drafts with a 3rd-round reversal (auction leagues excepted). The clock pauses from 11 PM to 8 AM EST.</li><li>Rookie drafts order non-playoff teams by max points.</li><li>Trading is allowed during startup drafts. A future season’s picks can only be traded once that season is paid for.</li><li>Trade deadline is after Week 11. Trading reopens at the start of next season.</li><li>Vetoes are rare and limited to suspected collusion or clearly unfair trades. Trades involving players who have played or are playing wait until that week’s games finish.</li></ul>`],
  ['Waivers',`<ul><li>$100 FAAB per season, reset when the rookie draft concludes.</li><li>Waivers run Wednesday through Saturday. Sunday is unrestricted.</li></ul>`],
  ['Tournament of Losers',`<ul><li>The lowest max-points team in each sub-league qualifies.</li><li>Single elimination over Weeks 15–17, seeded by closeness to not being the worst. The top 2 seeds get a bye to the semifinals.</li><li>The winner’s buy-in is refunded and they win $40.</li></ul>`],
@@ -300,39 +296,108 @@ function renderBylaws(){
 
 
 
-/* ---------- Verification ---------- */
-let LEDGER = null;
-const sgn = n => (n>0?'+':'')+f2(n);
-async function renderVerify(){
-  const el = $('#v-verify'), A = D.audit, L = D.ledger, ext = (D.external&&D.external.checks)||[];
-  const qs = (D.rules||[]).map(q=>`<div class="q"><h3>${esc(q.q)} <span class="chip ${q.status==='answered'?'good':'warn'}">${q.status==='answered'?'answered':'assumed, not confirmed'}</span></h3><p><b>What the bylaws say:</b> ${esc(q.bylaws)}</p><p><b>What this site assumes:</b> ${esc(q.assumption)}</p></div>`).join('');
-  const aud = A ? `<div class="card"><h3>Two independent scorers</h3><div class="big">${A.diffs.length===0?'Agree':A.diffs.length+' differ'}</div><div class="sub">Week ${A.week}: ${A.compared} players scored by the site scorer and by a second scorer written separately from the bylaws wording. ${A.diffs.length?A.diffs.map(d=>esc(d.name)+' '+f2(d.site)+' vs '+f2(d.bylaws)).join('; '):'Every player matched to the cent.'}</div></div>
-    <div class="card"><h3>Stat fields nobody scores</h3><div class="big">${Object.keys(A.unhandledStatKeys||{}).length}</div><div class="sub">${Object.keys(A.unhandledStatKeys||{}).length?'Sleeper fields that look scoring-related but are in neither scorer: '+Object.entries(A.unhandledStatKeys).map(([k,v])=>esc(k)+' ('+v+' players)').join(', ')+'. Each needs a ruling.':'No scoring-looking stat field is being ignored.'}</div></div>` : '';
-  el.innerHTML = `<h2>Verification</h2>
-  <p class="lede">What has been checked, against what, and what is still open. Nothing here replaces the commissioner’s ruling.</p>
-  <h2>Rules the bylaws leave open</h2>${qs}
-  <h2>Checks</h2><div class="grid">${aud}
-    <div class="card"><h3>Raw data archive</h3><div class="sub">Every few hours, and whenever a week closes, the update job saves the full raw Sleeper pull (rosters, matchups, transactions, settings, stat lines) with a timestamp to the repo’s <code>raw-snapshots</code> branch. Any score here can be re-derived offline from it with <code>scripts/replay.mjs</code>.</div></div>
-    <div class="card"><h3>Confirmed outside Sleeper</h3><div class="big">${ext.filter(x=>x.status==='confirmed').length} of ${ext.length}</div><div class="sub">Lines compared with box scores and news reports. ${ext.filter(x=>x.status==='unresolved').length} unresolved. Everything not listed below rests on Sleeper alone.</div></div></div>
-  <h2>Outside checks, Week 5</h2>
-  <div class="tablebox"><table><thead><tr><th>Player</th><th>What was checked</th><th>Result</th><th>Source</th></tr></thead><tbody>${ext.map(x=>`<tr><td>${esc(x.player)}</td><td style="white-space:normal;min-width:260px">${esc(x.item)}</td><td><span class="chip ${x.status==='confirmed'?'good':x.status==='unresolved'?'bad':'warn'}">${esc(x.status)}</span></td><td style="white-space:normal;min-width:200px"><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.source.split('.')[0].slice(0,90))} ↗</a></td></tr>`).join('')}</tbody></table></div>
-  ${D.external&&D.external.notChecked?`<p class="note"><b>Sleeper only (not checked elsewhere):</b> ${esc(D.external.notChecked)}</p>`:''}
-  <h2>Commissioner’s sheet vs this site</h2><p class="lede">Player by player. “Sheet only” means the sheet lists someone who was not on the Sleeper roster; “site only” means the site found a player the sheet is missing.</p>
-  <div id="ledger"><p class="note">Loading…</p></div>`;
-  try{
-    if(!LEDGER){ const r = await fetch('ledger.json?_='+Date.now()); if(!r.ok) throw 0; LEDGER = await r.json(); }
-    const tabs = LEDGER.tabs.filter(t=>t.detail);
-    $('#ledger').innerHTML = tabs.map(t=>{
-      const diffs = t.detail.filter(x=>Math.abs(x.delta)>LEDGER.tolerance);
-      return `<h3>Sheet tab ${esc(t.gid)} · matches Week ${t.weekMatched}${t.weeksTried.length>1?` <span class="mini">(tried ${t.weeksTried.map(w=>'Week '+w.week+': total gap '+f2(w.sumAbsDelta)).join(', ')})</span>`:''}</h3>
-      <p class="mini">${t.exact} of ${t.teams} teams match the sheet to the cent. Largest team gap: ${f2(t.maxAbsDelta)}.</p>
-      ${diffs.length?`<div class="tablebox"><table><thead><tr><th>Team</th><th class="n">Sheet</th><th class="n">Site</th><th class="n">Gap</th><th>Where the gap comes from</th></tr></thead><tbody>${diffs.map(x=>`<tr><td>${esc(x.owner)}</td><td class="n">${f2(x.sheetTotal)}</td><td class="n">${f2(x.siteTotal)}</td><td class="n ${x.delta<0?'delta-neg':'delta-pos'}">${sgn(x.delta)}</td><td style="white-space:normal">${x.rows.filter(r=>r.status!=='match').map(r=>r.status==='site-only'?`Site only: ${esc(r.siteName)} (${f2(r.sitePts)}) ${r.src?`<a href="${esc(r.src)}" target="_blank" rel="noopener">stat line ↗</a>`:''}`:r.status==='sheet-only'?`Sheet only: ${esc(r.sheetName)} (${f2(r.sheetPts)})`:`${esc(r.siteName)}: sheet ${f2(r.sheetPts)}, site ${f2(r.sitePts)} ${r.src?`<a href="${esc(r.src)}" target="_blank" rel="noopener">stat line ↗</a>`:''}`).join('<br>')}${x.sheetArithmeticOk?'':'<br><i>The sheet’s own total does not equal its listed players.</i>'}</td></tr>`).join('')}</tbody></table></div>`:'<p class="note">No differences.</p>'}`;
-    }).join('') + (LEDGER.tabs.filter(t=>t.error).map(t=>`<p class="note">Tab ${esc(t.gid)} could not be reconciled: ${esc(t.error)}.</p>`).join(''));
-  }catch(e){ $('#ledger').innerHTML = '<p class="note">The reconciliation file is not available yet. It is produced on the next update run.</p>'; }
+/* ---------- Shared helpers for rankings ---------- */
+const mean = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0;
+const sd = a => { const m=mean(a); return Math.sqrt(mean(a.map(v=>(v-m)**2))); };
+const zmap = (rows, f) => { const v=rows.map(f), m=mean(v), s=sd(v)||1; return rows.map((_,i)=>(v[i]-m)/s); };
+const GRADES = [[1.6,'A+'],[1.1,'A'],[0.8,'A-'],[0.5,'B+'],[0.2,'B'],[-0.1,'B-'],[-0.4,'C+'],[-0.7,'C'],[-1.0,'C-'],[-1.4,'D']];
+const gradeOf = z => { for(const [t,g] of GRADES) if(z>=t) return g; return 'F'; };
+const gradeCls = g => g[0]==='A'?'good':g[0]==='B'?'':g[0]==='C'?'warn':'bad';
+const score100 = z => Math.max(0, Math.min(100, Math.round(50+z*15)));
+const gradeLegend = `<p class="note"><b>Grade scale</b> (by standard deviations above or below the average team in the group): A+ 1.6+ · A 1.1+ · A− 0.8+ · B+ 0.5+ · B 0.2+ · B− −0.1+ · C+ −0.4+ · C −0.7+ · C− −1.0+ · D −1.4+ · F below. The 0–100 number is the same thing rescaled (50 is average). Rankings are opinion built from the numbers on this site, not an official ranking.</p>`;
+
+function profile(x){
+  const sc = x.scores, n = sc.length, avg = mean(sc), l3 = mean(sc.slice(-3));
+  return {avg, l3, floor:Math.min(...sc), ceil:Math.max(...sc), sd:sd(sc), wp:(x.w+0.5*x.t)/Math.max(1,x.w+x.l+x.t), n};
+}
+const COMP_LABEL = {avg:'season scoring average', l3:'recent form', wp:'win percentage', floor:'worst week', ceil:'best week', w5:'ToC Week 5 score', cush:'cushion over last place'};
+function drivers(comps, zs){
+  const ks = Object.keys(comps).map(k=>[k,zs[k]]).sort((a,b)=>b[1]-a[1]);
+  const top = ks[0], low = ks[ks.length-1];
+  const t = top[1]>0.4 ? `Helped most by ${COMP_LABEL[top[0]]}` : 'No standout strength';
+  const w = low[1]<-0.4 ? `held back by ${COMP_LABEL[low[0]]}` : 'no clear weakness';
+  return `${t}; ${w}.`;
 }
 
+/* ---------- Power rankings by league ---------- */
+let curPower = null;
+function renderPower(){
+  const all = D.standings.map(x=>({x, p:profile(x)}));
+  const keys = {avg:.35, l3:.25, wp:.20, floor:.10, ceil:.10};
+  const Z = {}; Object.keys(keys).forEach(k=>Z[k]=zmap(all,r=>r.p[k]));
+  all.forEach((r,i)=>{ r.zs = Object.fromEntries(Object.keys(keys).map(k=>[k,Z[k][i]])); r.z = Object.keys(keys).reduce((s,k)=>s+keys[k]*r.zs[k],0); });
+  const zz = zmap(all,r=>r.z); all.forEach((r,i)=>r.z=zz[i]);
+  const avgRank = [...all].sort((a,b)=>b.p.avg-a.p.avg); all.forEach(r=>r.avgRank=avgRank.indexOf(r)+1);
+  const names = [...new Set(D.standings.map(x=>x.league))];
+  if(!curPower) curPower = (D.standings.find(x=>x.owner===ME)||{}).league || names[0];
+  const rows = all.filter(r=>r.x.league===curPower).sort((a,b)=>b.z-a.z);
+  const pfOrder = [...rows].sort((a,b)=>b.x.pf-a.x.pf);
+  const body = rows.map((r,i)=>{
+    const {x,p} = r, g = gradeOf(r.z), pfRank = pfOrder.indexOf(r)+1;
+    const trend = p.l3-p.avg > 8 ? 'heating up' : p.l3-p.avg < -8 ? 'cooling off' : 'steady lately';
+    const luck = x.rank <= pfRank-2 ? 'The record flatters them: points rank is lower than the standings spot.' : x.rank >= pfRank+2 ? 'Unlucky: scoring is better than the record shows.' : '';
+    const shape = p.sd < 20 ? 'very consistent' : p.sd > 35 ? 'boom or bust' : 'fairly consistent';
+    return `<tr><td class="n">${i+1}</td><td class="${x.owner===ME?'me':''}">${esc(x.owner)}<div class="mini" style="margin:0">${esc(x.team||'')}</div></td><td><span class="chip ${gradeCls(g)}"><b>${g}</b></span></td><td class="n">${score100(r.z)}</td><td class="n">${x.record}<div class="mini" style="margin:0">#${x.rank} in standings</div></td><td style="white-space:normal;min-width:300px"><b>${p.avg>=0?f2(p.avg):''} per week</b> (#${r.avgRank} of 84), ${trend}, ${shape}. ${luck}<div class="mini" style="margin-top:4px">${drivers(keys,r.zs)} Last 3 weeks ${f2(p.l3)}, best ${f2(p.ceil)}, worst ${f2(p.floor)}.</div></td></tr>`;
+  }).join('');
+  $('#v-power').innerHTML = `<h2>League power rankings</h2>
+  <p class="lede">Ranks each team by how well it is actually playing, not only by record: 35% season scoring average, 25% last three weeks, 20% win percentage, 10% worst week, 10% best week. Grades compare each team with all 84.</p>
+  <div class="seg">${names.map(l=>`<button aria-pressed="${l===curPower}" data-l="${esc(l)}">${esc(l)}</button>`).join('')}</div>
+  <div class="tablebox"><table><thead><tr><th class="n">#</th><th>Team</th><th>Grade</th><th class="n">Score</th><th class="n">Record</th><th>Description and reasoning</th></tr></thead><tbody>${body}</tbody></table></div>${gradeLegend}`;
+  document.querySelectorAll('#v-power .seg button').forEach(b=>b.addEventListener('click',()=>{curPower=b.dataset.l;renderPower()}));
+}
+
+/* ---------- Power rankings, survival bracket ---------- */
+function renderSPower(){
+  const T = D.toc, ws = Object.keys(T.weeks).map(Number).sort((a,b)=>a-b);
+  const el = $('#v-spower');
+  if(!ws.length){ el.innerHTML = '<h2>Survival power rankings</h2><p class="lede">The first ToC week has not been played yet.</p>'; return; }
+  const W = T.weeks[ws[ws.length-1]], surv = W.survival, lowest = surv[surv.length-1].pts;
+  const byOwner = Object.fromEntries(D.standings.map(x=>[x.owner,x]));
+  const rows = surv.map(r=>{ const x = byOwner[r.owner]; return {r, x, p:x?profile(x):null, toc:ws.map(w=>{const t=T.weeks[w].survival.find(q=>q.owner===r.owner);return t?t.pts:null}).filter(v=>v!==null)}; });
+  const keys = {w5:.35, avg:.25, l3:.15, floor:.15, wp:.10};
+  rows.forEach(a=>{ a.v = {w5:a.r.pts, avg:a.p?a.p.avg:0, l3:a.p?a.p.l3:0, floor:a.p?a.p.floor:0, wp:a.p?a.p.wp:0}; });
+  const Z = {}; Object.keys(keys).forEach(k=>Z[k]=zmap(rows,a=>a.v[k]));
+  rows.forEach((a,i)=>{ a.zs = Object.fromEntries(Object.keys(keys).map(k=>[k,Z[k][i]])); a.z = Object.keys(keys).reduce((s,k)=>s+keys[k]*a.zs[k],0); });
+  const zz = zmap(rows,a=>a.z); rows.forEach((a,i)=>a.z=zz[i]);
+  rows.sort((a,b)=>b.z-a.z);
+  const body = rows.map((a,i)=>{
+    const g = gradeOf(a.z), r = a.r, cush = r.pts-lowest, demoted = r.owner===W.demoted;
+    const risk = demoted ? 'Demoted this week.' : cush < 10 ? 'Danger: only '+f2(cush)+' above the week’s lowest score.' : cush < 30 ? 'Mild risk: '+f2(cush)+' above the cut line.' : 'Safe: '+f2(cush)+' above the cut line.';
+    const trend = a.p ? (a.p.l3-a.p.avg > 8 ? 'heating up' : a.p.l3-a.p.avg < -8 ? 'cooling off' : 'steady lately') : '';
+    return `<tr><td class="n">${i+1}</td><td class="${r.owner===ME?'me':''}">${esc(r.owner)}<div class="mini" style="margin:0">${esc(r.league)}</div></td><td><span class="chip ${gradeCls(g)}"><b>${g}</b></span></td><td class="n">${score100(a.z)}</td><td class="n"><b>${f2(r.pts)}</b></td><td style="white-space:normal;min-width:300px">${esc(risk)} Season average ${a?f2(a.v.avg):''}, ${trend}. ${a.p?`<div class="mini" style="margin-top:4px">${drivers(keys,a.zs)} Sub-league record ${esc(a.x.record)}, worst week ${f2(a.p.floor)}.</div>`:''}</td></tr>`;
+  }).join('');
+  el.innerHTML = `<h2>Survival power rankings <span class="chip">${rows.length} teams · after Week ${ws[ws.length-1]}</span></h2>
+  <p class="lede">Who looks strongest to avoid the next drop. Weighted 35% latest ToC week, 25% season scoring average, 15% last three weeks, 15% worst week, 10% win percentage. Grades compare these teams with each other, so a B here is a middle-of-the-pack survivor.</p>
+  <div class="tablebox"><table><thead><tr><th class="n">#</th><th>Team</th><th>Grade</th><th class="n">Score</th><th class="n">ToC wk ${ws[ws.length-1]}</th><th>Description and reasoning</th></tr></thead><tbody>${body}</tbody></table></div>${gradeLegend}`;
+}
+
+/* ---------- Legacy score ---------- */
+const LEG = {winPct:40, leagueHigh:5, overall:{1:6,2:4,3:2}, finish:{1:15,2:10,3:7,4:4,5:2,6:2}, tocEntered:5, tocWeek:3, tocSurvived:2};
+function renderLegacy(){
+  const T = D.toc, ws = Object.keys(T.weeks).map(Number).sort((a,b)=>a-b);
+  const rows = D.standings.map(x=>{
+    const p = profile(x);
+    const hi = D.team_of_week.filter(t=>t.owner===x.owner&&t.league===x.league).length;
+    const ov = D.top_scores.filter(t=>t.owner===x.owner), ovPts = ov.reduce((s,t)=>s+(LEG.overall[t.place]||0),0);
+    let toc = 0, tocWeeks = 0, out = '';
+    ws.forEach(w=>{ const W = T.weeks[w], inS = W.survival.some(q=>q.owner===x.owner), inR = W.revival.some(q=>q.owner===x.owner); if(inS||inR){ tocWeeks++; if(W.eliminated===x.owner) out = ' (eliminated Week '+w+')'; else if(W.demoted===x.owner) out = ' (demoted Week '+w+')'; } });
+    const tocPts = tocWeeks ? LEG.tocEntered + tocWeeks*LEG.tocWeek + Math.max(0,tocWeeks-(out.includes('eliminated')?1:0))*LEG.tocSurvived : 0;
+    const c = {win:LEG.winPct*p.wp, hi:hi*LEG.leagueHigh, ov:ovPts, fin:LEG.finish[x.rank]||0, toc:tocPts};
+    return {x, c, total:Object.values(c).reduce((a,b)=>a+b,0), hi, ov:ov.length, tocWeeks, out};
+  }).sort((a,b)=>b.total-a.total);
+  const body = rows.slice(0,50).map((r,i)=>`<tr><td class="n">${i+1}</td><td class="${r.x.owner===ME?'me':''}">${esc(r.x.owner)}${i<6?' <span class="chip good">Pot</span>':''}<div class="mini" style="margin:0">${esc(r.x.league)}</div></td><td class="n"><b>${f2(r.total)}</b></td><td class="n">${f2(r.c.win)}</td><td class="n">${r.c.hi}</td><td class="n">${r.c.ov}</td><td class="n">${r.c.fin}</td><td class="n">${r.c.toc}${esc(r.out)}</td></tr>`).join('');
+  const me = rows.findIndex(r=>r.x.owner===ME);
+  $('#v-legacy').innerHTML = `<h2>Legacy score leaderboard</h2>
+  <p class="lede">The bylaws say the Progressive Legacy Pot is split among the top six legacy scorers (33%, 22%, 15%, 12%, 10%, 8%), but they do not give point values. This board is therefore an <b>estimate for this season only</b>, using stand-in weights, until the commissioner shares the real table. The top six are marked “Pot”.</p>
+  ${me>=6?`<p class="note">You (${esc(ME)}) are currently #${me+1} of ${rows.length} on this estimate.</p>`:''}
+  <div class="tablebox"><table><thead><tr><th class="n">#</th><th>Team</th><th class="n">Legacy</th><th class="n">Win %</th><th class="n">League high scores</th><th class="n">Overall top-3 weeks</th><th class="n">Standing pts</th><th class="n">ToC pts</th></tr></thead><tbody>${body}</tbody></table></div>
+  <p class="note"><b>Stand-in weights:</b> win percentage ×${LEG.winPct}; ${LEG.leagueHigh} per week as your sub-league’s top scorer; ${LEG.overall[1]}/${LEG.overall[2]}/${LEG.overall[3]} for finishing 1st/2nd/3rd in the all-84 weekly top scores; current sub-league standing ${Object.entries(LEG.finish).map(([k,v])=>'#'+k+' = '+v).join(', ')}; ToC: ${LEG.tocEntered} for entering plus ${LEG.tocWeek} per week played and ${LEG.tocSurvived} per week survived.</p>
+  <p class="note"><b>Left out because the data is not available here:</b> owner of the year, voted awards, bottom finishes, playoff results, seasons played and past seasons. Real legacy totals will differ. Ask crustyolive for the official point table.</p>`;
+}
+
+
 /* ---------- Tabs, theme, load ---------- */
-const R = {toc:renderToc,leagues:renderLeagues,awards:renderAwards,teams:()=>renderTeams(''),bylaws:renderBylaws,verify:renderVerify};
+const R = {toc:renderToc,leagues:renderLeagues,awards:renderAwards,teams:()=>renderTeams(''),bylaws:renderBylaws,power:renderPower,spower:renderSPower,legacy:renderLegacy};
 const done = {};
 function show(t){
   if(!R[t]) t='toc';
