@@ -36,3 +36,5 @@ jobs:
           path: public
       - id: deployment
         uses: actions/deploy-pages@v4
+      - name: Refresh Vercel
+        curl -fsS -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
