@@ -74,6 +74,26 @@ let latest = 0;
 for (const L of leagues) for (const [w, m] of Object.entries(L.weeks)) if (m.some(x => (x.points || 0) > 0)) latest = Math.max(latest, Number(w));
 const liveWeek = regular && latest >= Number(state.week);
 
+// Who carries each team: season points by starter (Sleeper's own league scoring), plus where the points come from.
+const allPlayers = await getOpt(`${API}/players/nfl`) || {};
+const FLEXPOS = new Set(['QB', 'RB', 'WR', 'TE']);
+function coreOf(L, rosterId) {
+  const by = {}, share = { QB: 0, RB: 0, WR: 0, TE: 0 };
+  for (const [w, m] of Object.entries(L.weeks)) {
+    const x = m.find(q => q.roster_id === rosterId); if (!x || !Array.isArray(x.starters)) continue;
+    x.starters.forEach((id, i) => {
+      const pts = (x.starters_points || [])[i]; if (!id || id === '0' || typeof pts !== 'number') return;
+      const pl = allPlayers[id] || {}, pos = pl.position === 'FB' ? 'RB' : pl.position;
+      const rec = by[id] = by[id] || { id, name: `${pl.first_name || ''} ${pl.last_name || ''}`.trim() || String(id), pos: pos || '', team: pl.team || '', pts: 0, weeks: 0, best: 0 };
+      rec.pts += pts; rec.weeks++; rec.best = Math.max(rec.best, pts);
+      if (FLEXPOS.has(pos)) share[pos] += pts;
+    });
+  }
+  const list = Object.values(by).sort((a, b) => b.pts - a.pts);
+  const tot = Object.values(share).reduce((a, b) => a + b, 0) || 1;
+  return { core: list.slice(0, 5).map(p => ({ name: p.name, pos: p.pos, team: p.team, pts: r2(p.pts), weeks: p.weeks, best: r2(p.best) })), mix: Object.fromEntries(Object.entries(share).map(([k, v]) => [k, Math.round(100 * v / tot)])) };
+}
+
 const standings = [], team_of_week = [], league_flags = [], allScores = [];
 for (const L of leagues) {
   const pts = (w, rid) => { const x = (L.weeks[w] || []).find(m => m.roster_id === rid); return x ? r2(x.points || 0) : 0; };
@@ -84,6 +104,7 @@ for (const L of leagues) {
     standings.push({
       league: L.name, rank, owner: t.owner, team: t.team, w: t.w, l: t.l, t: t.t,
       record: `${t.w}-${t.l}${t.t ? '-' + t.t : ''}`, pf: t.pf, pa: t.pa, scores,
+      ...coreOf(L, t.rosterId),
       zone: rank <= 3 ? 'ToC qualifier' : rank === 4 ? 'ToC play-in' : rank <= 6 ? 'Playoffs' : ''
     });
     t.scores = scores;
@@ -118,7 +139,7 @@ const VARIANTS = [
 ];
 
 if (latest >= cfg.toc.startWeek) {
-  const players = await get(`${API}/players/nfl`);
+  const players = Object.keys(allPlayers).length ? allPlayers : await get(`${API}/players/nfl`);
   const info = makeInfo(players);
   for (let w = cfg.toc.startWeek; w <= latest; w++) {
     const stats = statsCache[w] = await get(`${API}/stats/nfl/regular/${cfg.season}/${w}`);
