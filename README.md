@@ -32,3 +32,6 @@ GitHub pauses scheduled jobs in a public repo after 60 days with no activity. Pr
 ## Preview on your own computer
 
 Install Node 20, then in this folder: `node scripts/build-data.mjs` (pulls fresh data) and `node scripts/serve.mjs` (open http://localhost:8080).
+
+## Verification
+See `docs/VERIFICATION.md`: how each score is checked, what the result statuses mean, what is still open, and the questions for the commissioner. Run `npm test` to check the scorers against the hand-worked cases.

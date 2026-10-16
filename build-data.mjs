@@ -1,0 +1,245 @@
+// Pulls the six sub-leagues from Sleeper and writes public/data.json for the site,
+// plus raw/snapshot.json (every raw response used, for the timestamped archive).
+// Run with: node scripts/build-data.mjs     (Node 20+, no dependencies)
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { DEFAULT_RULES } from './toc-scoring.mjs';
+import { makeInfo, scoreRoster, rosterAtLock, differential, marginInfo, r2 } from './toc-core.mjs';
+import { parseSheetCsv, reconcileTeam } from './ledger.mjs';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const cfg = JSON.parse(await readFile(join(ROOT, 'config.json'), 'utf8'));
+const API = process.env.SLEEPER_API || 'https://api.sleeper.app/v1';
+const OUT = process.env.OUT_FILE || join(ROOT, 'public', 'data.json');
+const RAW_OUT = process.env.RAW_OUT || join(ROOT, 'raw', 'snapshot.json');
+const RULES = cfg.rules;
+
+async function get(url, tries = 4) {
+  let err;
+  for (let i = 0; i < tries; i++) {
+    try {
+      const r = await fetch(url, { headers: { accept: 'application/json' } });
+      if (r.ok) return await r.json();
+      err = new Error(`${r.status} ${url}`);
+    } catch (e) { err = e; }
+    await new Promise(res => setTimeout(res, 1000 * (i + 1)));
+  }
+  throw err;
+}
+// Optional endpoints: never let them break the build, but remember that they failed.
+const missing = [];
+async function getOpt(url) { try { return await get(url, 2); } catch (e) { missing.push(url.replace(API, '')); return null; } }
+
+const fetchedAt = new Date().toISOString();
+const raw = { fetchedAt, api: API, season: cfg.season, leagues: {}, stats: {}, players: {} };
+
+// ---- NFL state -------------------------------------------------------------
+const state = await get(`${API}/state/nfl`);
+raw.state = state;
+const regular = state.season_type === 'regular';
+const maxWeek = regular ? Math.min(Number(state.week) || 1, 18) : 18;
+const isFinal = w => !regular || w < Number(state.week);
+
+// ---- sub-leagues -----------------------------------------------------------
+const leagues = [];
+for (const L of cfg.leagues) {
+  const [users, rosters] = await Promise.all([get(`${API}/league/${L.id}/users`), get(`${API}/league/${L.id}/rosters`)]);
+  const settings = await getOpt(`${API}/league/${L.id}`);
+  const byUser = Object.fromEntries(users.map(u => [u.user_id, u]));
+  const weeks = {};
+  for (let w = 1; w <= maxWeek; w++) {
+    const m = await get(`${API}/league/${L.id}/matchups/${w}`);
+    if (Array.isArray(m) && m.length) weeks[w] = m;
+  }
+  raw.leagues[L.id] = { name: L.name, settings, users, rosters, matchups: weeks, transactions: {} };
+  const teams = rosters.map(r => {
+    const u = byUser[r.owner_id] || {};
+    const s = r.settings || {};
+    return {
+      rosterId: r.roster_id, owner: u.display_name || `Roster ${r.roster_id}`,
+      team: (u.metadata && u.metadata.team_name) || '',
+      w: s.wins || 0, l: s.losses || 0, t: s.ties || 0,
+      pf: r2((s.fpts || 0) + (s.fpts_decimal || 0) / 100), pa: r2((s.fpts_against || 0) + (s.fpts_against_decimal || 0) / 100),
+      league: L.name
+    };
+  });
+  leagues.push({ ...L, teams, weeks, tx: {} });
+}
+const owners = leagues.flatMap(l => l.teams.map(t => t.owner));
+if (new Set(owners).size !== owners.length) console.warn('Warning: duplicate display names across sub-leagues');
+
+// weeks that have any scoring so far
+let latest = 0;
+for (const L of leagues) for (const [w, m] of Object.entries(L.weeks)) if (m.some(x => (x.points || 0) > 0)) latest = Math.max(latest, Number(w));
+const liveWeek = regular && latest >= Number(state.week);
+
+const standings = [], team_of_week = [], league_flags = [], allScores = [];
+for (const L of leagues) {
+  const pts = (w, rid) => { const x = (L.weeks[w] || []).find(m => m.roster_id === rid); return x ? r2(x.points || 0) : 0; };
+  const order = [...L.teams].sort((a, b) => (b.w + b.t / 2) - (a.w + a.t / 2) || b.pf - a.pf);
+  order.forEach((t, i) => {
+    const rank = i + 1;
+    const scores = []; for (let w = 1; w <= latest; w++) scores.push(pts(w, t.rosterId));
+    standings.push({
+      league: L.name, rank, owner: t.owner, team: t.team, w: t.w, l: t.l, t: t.t,
+      record: `${t.w}-${t.l}${t.t ? '-' + t.t : ''}`, pf: t.pf, pa: t.pa, scores,
+      zone: rank <= 3 ? 'ToC qualifier' : rank === 4 ? 'ToC play-in' : rank <= 6 ? 'Playoffs' : ''
+    });
+    t.scores = scores;
+  });
+  for (let w = 1; w <= latest; w++) {
+    const best = [...L.teams].sort((a, b) => b.scores[w - 1] - a.scores[w - 1])[0];
+    if (best) team_of_week.push({ league: L.name, week: w, owner: best.owner, pts: best.scores[w - 1] });
+    for (const t of L.teams) allScores.push({ week: w, owner: t.owner, league: L.name, pts: t.scores[w - 1] });
+  }
+  const low = [...L.teams].sort((a, b) => a.pf - b.pf)[0], pa = [...L.teams].sort((a, b) => b.pa - a.pa)[0];
+  league_flags.push({ league: L.name, lowest_pf_owner: low.owner, lowest_pf: low.pf, most_pa_owner: pa.owner, most_pa: pa.pa });
+}
+const top_scores = [];
+for (let w = 1; w <= latest; w++) {
+  allScores.filter(x => x.week === w).sort((a, b) => b.pts - a.pts).slice(0, 3)
+    .forEach((x, i) => top_scores.push({ week: w, place: i + 1, owner: x.owner, league: x.league, pts: x.pts }));
+}
+
+// ---- Tournament of Champions ----------------------------------------------
+const toc = { startWeek: cfg.toc.startWeek, weeks: {}, latestWeek: null, eliminated: cfg.toc.eliminated.map(e => ({ ...e })), survival: [], revival: [] };
+const where = {};
+for (const L of leagues) for (const t of L.teams) where[t.owner] = { L, t };
+let surv = new Set(cfg.toc.survival), rev = new Set(cfg.toc.revival);
+const cum = { ...cfg.toc.cumBefore };
+let audit = null, priorProvisional = false, ledgerOut = null;
+const statsCache = {};
+
+const VARIANTS = [
+  { id: 'qb-reception', label: 'a quarterback earns 1 point per reception', rules: { ...DEFAULT_RULES, qbReceptionPoints: 1 } },
+  { id: 'combined-100', label: 'the 100-yard bonus also counts rushing + receiving combined', rules: { ...DEFAULT_RULES, combined100Bonus: true } },
+  { id: 'roster-lock', label: 'rosters lock at the first Thursday kickoff', rules: DEFAULT_RULES, lock: true }
+];
+
+if (latest >= cfg.toc.startWeek) {
+  const players = await get(`${API}/players/nfl`);
+  const info = makeInfo(players);
+  for (let w = cfg.toc.startWeek; w <= latest; w++) {
+    const stats = statsCache[w] = await get(`${API}/stats/nfl/regular/${cfg.season}/${w}`);
+    for (const L of leagues) { L.tx[w] = await getOpt(`${API}/league/${L.id}/transactions/${w}`); raw.leagues[L.id].transactions[w] = L.tx[w]; }
+    const lockMs = Date.parse(RULES.week1KickoffUtc) + (w - 1) * 7 * 864e5;
+    const txOk = leagues.every(L => Array.isArray(L.tx[w]));
+
+    const idsFor = (owner, lock) => {
+      const at = where[owner];
+      const m = (at.L.weeks[w] || []).find(x => x.roster_id === at.t.rosterId);
+      const ids = (m && m.players) || [];
+      return lock ? rosterAtLock(ids, at.t.rosterId, at.L.tx[w], lockMs) : { ids, changes: [] };
+    };
+    const field = [...surv, ...rev].filter(o => { if (!where[o]) { console.warn('ToC team not found in Sleeper:', o); return false; } return true; });
+    const nameOf = id => { const i = info(id); return i ? i.name : String(id); };
+
+    // baseline (bylaws read literally) with full working for every player
+    const rows = field.map(owner => {
+      const at = where[owner], { ids } = idsFor(owner, false), after = idsFor(owner, true).changes;
+      const sc = scoreRoster(ids, stats, info, DEFAULT_RULES, { season: cfg.season, week: w });
+      cum[owner] = r2((cum[owner] || 0) + sc.total);
+      return {
+        owner, league: at.L.name, team: at.t.team, bracket: surv.has(owner) ? 'survival' : 'revival', pts: sc.total, total: cum[owner], lineup: sc.lineup,
+        afterLock: after.map(c => ({ type: c.type, at: c.at, ...(c.add ? { add: nameOf(c.add) } : { drop: nameOf(c.drop) }) }))
+      };
+    });
+    rows.sort((a, b) => b.pts - a.pts);
+    const s = rows.filter(r => r.bracket === 'survival'), v = rows.filter(r => r.bracket === 'revival');
+    const demoted = s.length > 1 ? s[s.length - 1].owner : null;
+    const eliminated = v.length ? v[v.length - 1].owner : null;
+    const final = isFinal(w);
+
+    // same week, other readings of the rules the bylaws leave open
+    const variants = VARIANTS.map(V => {
+      if (V.lock && !txOk) return { id: V.id, label: V.label, unavailable: true };
+      const tot = field.map(owner => {
+        const { ids } = idsFor(owner, !!V.lock);
+        return { owner, bracket: surv.has(owner) ? 'survival' : 'revival', pts: scoreRoster(ids, stats, info, V.rules).total };
+      });
+      const lo = br => { const t = tot.filter(x => x.bracket === br).sort((a, b) => a.pts - b.pts); return t.length ? t[0].owner : null; };
+      const d = s.length > 1 ? lo('survival') : null, e = v.length ? lo('revival') : null;
+      const moved = tot.map(x => ({ owner: x.owner, delta: r2(x.pts - rows.find(r => r.owner === x.owner).pts) })).filter(x => Math.abs(x.delta) > 0.004);
+      return { id: V.id, label: V.label, demoted: d, eliminated: e, flips: d !== demoted || e !== eliminated, moved };
+    });
+
+    const margins = { survival: marginInfo(s, RULES.margins), revival: marginInfo(v, RULES.margins) };
+    const reasons = []; let st = 'final';
+    if (!final) { st = 'live'; reasons.push('The NFL week is still in progress.'); }
+    else {
+      for (const x of variants) {
+        if (x.unavailable) { st = 'provisional'; reasons.push('Transaction history could not be loaded, so the roster-lock reading was not tested.'); }
+        else if (x.flips) { st = 'provisional'; reasons.push(`The result changes if ${x.label}.`); }
+      }
+      for (const [b, m] of Object.entries(margins)) if (m && m.level === 'inside') { st = 'provisional'; reasons.push(`${m.lowest} is lowest by only ${m.margin} points over ${m.next}, less than one stat correction (${RULES.margins.oneEvent} points).`); }
+      if (priorProvisional) { st = 'provisional'; reasons.push('This week’s field depends on an earlier result that is still provisional.'); }
+      if (st === 'final') {
+        for (const [b, m] of Object.entries(margins)) if (m && m.level === 'watch') { st = 'stands'; reasons.push(`${m.lowest} is lowest by ${m.margin} points over ${m.next}: a single touchdown change could flip it.`); }
+        const open = RULES.questions.filter(q => q.status !== 'answered');
+        if (open.length) { st = 'stands'; reasons.push(`Rules still unconfirmed by the commissioner: ${open.map(q => q.id).join(', ')}. The result is the same under every reading tested.`); }
+      }
+    }
+    toc.weeks[w] = { final, lockedAt: new Date(lockMs).toISOString(), survival: s, revival: v, demoted, eliminated, margins, variants, verdict: { state: st, reasons } };
+    if (final) {
+      if (eliminated) { rev.delete(eliminated); toc.eliminated.push({ owner: eliminated, total: cum[eliminated], week: w, provisional: st !== 'final' }); }
+      if (demoted) { surv.delete(demoted); rev.add(demoted); }
+      if (st === 'provisional') priorProvisional = true;
+    }
+    toc.latestWeek = w;
+
+    // differential check of the two scorers on every player on every ToC roster this week
+    const allIds = field.flatMap(o => idsFor(o, false).ids);
+    const d = differential(allIds, stats, info);
+    audit = { week: w, compared: d.compared, diffs: d.diffs, unhandledStatKeys: d.unhandled };
+    raw.stats[w] = Object.fromEntries([...new Set(allIds)].filter(id => stats[id]).map(id => [id, stats[id]]));
+    for (const id of allIds) if (players[id]) raw.players[id] = { first_name: players[id].first_name, last_name: players[id].last_name, position: players[id].position, team: players[id].team };
+  }
+
+  // ---- reconcile the commissioner's sheet against the site, player by player ----
+  let expected = null;
+  try { expected = JSON.parse(await readFile(join(ROOT, 'tests', 'expected.json'), 'utf8')); } catch { /* optional */ }
+  if (expected) try {
+    const tol = expected.tolerance || 0.01, tabs = [];
+    for (const tab of expected.tabs) {
+      const sheet = parseSheetCsv(await readFile(join(ROOT, 'tests', tab.file), 'utf8'));
+      const tried = [], skipped = [];
+      for (const w of tab.weekCandidates) {
+        if (!leagues.every(L => L.weeks[w])) continue;
+        let stats;
+        try { stats = statsCache[w] || (statsCache[w] = await get(`${API}/stats/nfl/regular/${cfg.season}/${w}`, 2)); }
+        catch (e) { skipped.push({ week: w, reason: e.message }); continue; }
+        const teams = sheet.filter(sr => where[sr.owner]).map(sr => {
+          const at = where[sr.owner], m = (at.L.weeks[w] || []).find(x => x.roster_id === at.t.rosterId);
+          const sc = scoreRoster((m && m.players) || [], stats, info, DEFAULT_RULES, { season: cfg.season, week: w });
+          return { ...reconcileTeam(sr, sc.players, sc.total, sc.lineup), league: at.L.name };
+        });
+        tried.push({ week: w, sumAbsDelta: r2(teams.reduce((a, t) => a + Math.abs(t.delta), 0)), teams });
+      }
+      if (!tried.length) { tabs.push({ file: tab.file, gid: tab.gid, error: 'No candidate week could be scored', skipped }); continue; }
+      const best = tried.reduce((a, b) => (b.sumAbsDelta < a.sumAbsDelta ? b : a));
+      tabs.push({
+        file: tab.file, gid: tab.gid, weekMatched: best.week, weeksTried: tried.map(t => ({ week: t.week, sumAbsDelta: t.sumAbsDelta })), skipped,
+        teams: best.teams.length, exact: best.teams.filter(t => Math.abs(t.delta) <= tol).length,
+        maxAbsDelta: r2(Math.max(...best.teams.map(t => Math.abs(t.delta)))), detail: best.teams
+      });
+    }
+    ledgerOut = { generatedAt: fetchedAt, tolerance: tol, tabs };
+  } catch (e) { console.warn('Sheet reconciliation skipped:', e.message); ledgerOut = { generatedAt: fetchedAt, error: String(e.message), tabs: [] }; }
+}
+toc.survival = [...surv]; toc.revival = [...rev];
+
+let external = null;
+try { external = JSON.parse(await readFile(join(ROOT, 'tests', 'external-checks.json'), 'utf8')); } catch { /* optional */ }
+const data = {
+  meta: { generatedAt: fetchedAt, season: cfg.season, nflWeek: Number(state.week) || null, seasonType: state.season_type, latestWeek: latest, liveWeek, me: cfg.me, missingEndpoints: missing },
+  toc, rules: RULES.questions, audit, external, ledger: ledgerOut && { generatedAt: ledgerOut.generatedAt, tolerance: ledgerOut.tolerance, tabs: ledgerOut.tabs.map(({ detail, ...t }) => t) }, standings, team_of_week, league_flags, top_scores
+};
+await mkdir(dirname(OUT), { recursive: true });
+await writeFile(OUT, JSON.stringify(data));
+if (ledgerOut) await writeFile(join(dirname(OUT), 'ledger.json'), JSON.stringify(ledgerOut));
+await mkdir(dirname(RAW_OUT), { recursive: true });
+await writeFile(RAW_OUT, JSON.stringify(raw));
+console.log(`Wrote ${OUT}: week ${latest}${liveWeek ? ' (live)' : ''}, ${standings.length} teams, ToC weeks ${Object.keys(toc.weeks).join(',') || 'none'}; raw snapshot ${RAW_OUT}`);
+if (audit && audit.diffs.length) console.warn(`AUDIT: ${audit.diffs.length} player score difference(s) between the two scorers`);
+if (missing.length) console.warn('Optional endpoints unavailable:', missing.join(', '));

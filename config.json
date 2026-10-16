@@ -2,24 +2,144 @@
   "season": 2026,
   "me": "Losmika",
   "leagues": [
-    { "name": "The Tribe Has Spoken", "id": "1319043221740879872" },
-    { "name": "Redzone Royalty", "id": "1319043194805026816" },
-    { "name": "Up The Ante", "id": "1319043167449800704" },
-    { "name": "Bell Cow", "id": "1319043137317912576" },
-    { "name": "Pocket Presence", "id": "1319043103859957760" },
-    { "name": "Blitzkrieg", "id": "1319043072503345152" }
+    {
+      "name": "The Tribe Has Spoken",
+      "id": "1319043221740879872"
+    },
+    {
+      "name": "Redzone Royalty",
+      "id": "1319043194805026816"
+    },
+    {
+      "name": "Up The Ante",
+      "id": "1319043167449800704"
+    },
+    {
+      "name": "Bell Cow",
+      "id": "1319043137317912576"
+    },
+    {
+      "name": "Pocket Presence",
+      "id": "1319043103859957760"
+    },
+    {
+      "name": "Blitzkrieg",
+      "id": "1319043072503345152"
+    }
   ],
   "toc": {
     "startWeek": 5,
     "note": "Brackets at the start of startWeek. After that the script applies the rule: lowest survival score is demoted, lowest revival score is eliminated, each week.",
-    "survival": ["mcnutton","Losmika","HereForBeeerr","MoHegazy","bhatman8","AdithyaGowda","eatmycakes21","Brentlee93","JackEureka","ajd12","Gusbuster93","zswalker5","Urman1","gpryce"],
-    "revival": ["Ramathorne","WAFFT","geojag","Snaggler7"],
-    "eliminated": [ { "owner": "VanceGarren28", "total": 273.53 }, { "owner": "zcamloh11", "total": 571.93 } ],
+    "survival": [
+      "mcnutton",
+      "Losmika",
+      "HereForBeeerr",
+      "MoHegazy",
+      "bhatman8",
+      "AdithyaGowda",
+      "eatmycakes21",
+      "Brentlee93",
+      "JackEureka",
+      "ajd12",
+      "Gusbuster93",
+      "zswalker5",
+      "Urman1",
+      "gpryce"
+    ],
+    "revival": [
+      "Ramathorne",
+      "WAFFT",
+      "geojag",
+      "Snaggler7"
+    ],
+    "eliminated": [
+      {
+        "owner": "VanceGarren28",
+        "total": 273.53
+      },
+      {
+        "owner": "zcamloh11",
+        "total": 571.93
+      }
+    ],
     "cumBefore": {
-      "mcnutton": 709.84, "Losmika": 680.97, "HereForBeeerr": 679.63, "MoHegazy": 661.73, "bhatman8": 661.62,
-      "AdithyaGowda": 652.19, "eatmycakes21": 634.63, "Brentlee93": 622.22, "JackEureka": 599.96, "ajd12": 595.91,
-      "Gusbuster93": 592.17, "zswalker5": 591.32, "Urman1": 584.14, "gpryce": 564.29,
-      "Ramathorne": 582.61, "WAFFT": 539.95, "geojag": 533.57, "Snaggler7": 522.77
+      "mcnutton": 709.84,
+      "Losmika": 680.97,
+      "HereForBeeerr": 679.63,
+      "MoHegazy": 661.73,
+      "bhatman8": 661.62,
+      "AdithyaGowda": 652.19,
+      "eatmycakes21": 634.63,
+      "Brentlee93": 622.22,
+      "JackEureka": 599.96,
+      "ajd12": 595.91,
+      "Gusbuster93": 592.17,
+      "zswalker5": 591.32,
+      "Urman1": 584.14,
+      "gpryce": 564.29,
+      "Ramathorne": 582.61,
+      "WAFFT": 539.95,
+      "geojag": 533.57,
+      "Snaggler7": 522.77
     }
+  },
+  "rules": {
+    "week1KickoffUtc": "2026-09-11T00:15:00Z",
+    "margins": {
+      "oneEvent": 2,
+      "oneTouchdown": 6,
+      "note": "oneEvent: a single lost fumble or 2-point conversion, which Sleeper has already revised after a week closed (Week 5, Aaron Jones). oneTouchdown: a touchdown reassigned."
+    },
+    "questions": [
+      {
+        "id": "qb-reception",
+        "status": "assumed",
+        "q": "Does a quarterback earn points for a reception?",
+        "bylaws": "\"1 point per reception for Running Backs and Wide Receivers\"; \"2 points per reception for Tight Ends\" (quarterbacks not listed)",
+        "assumption": "No. Only RB, WR and TE score receptions. The commissioner sheet gave a QB 1 point in Week 5 (Jacoby Brissett), so the two disagree."
+      },
+      {
+        "id": "combined-100",
+        "status": "assumed",
+        "q": "Does the 100-yard bonus also apply to rushing plus receiving yards combined?",
+        "bylaws": "Scoring: \"100+ rushing yards bonus= 2 points\" and \"100+ yard receiving bonus= 2 points\"; Format list: \"100+ Rushing/Receiving Yards= 2 Points\"",
+        "assumption": "No. Separate 100-yard bonuses for rushing and for receiving only."
+      },
+      {
+        "id": "roster-lock",
+        "status": "assumed",
+        "q": "Which roster counts: the one at the first Thursday kickoff, or the final roster when the week closes?",
+        "bylaws": "No lock rule found. Only: \"Waivers will be processed through FAAB Wednesdays through Saturdays\" and \"Sunday will be unrestricted to accommodate for games beginning\"",
+        "assumption": "The roster Sleeper holds when the week closes, which already excludes pickups made after Monday night."
+      },
+      {
+        "id": "stat-corrections",
+        "status": "assumed",
+        "q": "Do official stat corrections made after a week closes change the result?",
+        "bylaws": "No rule found.",
+        "assumption": "Yes while the week is within a few days of closing; the site always uses the latest Sleeper stats and shows when they last changed."
+      },
+      {
+        "id": "negative-yards",
+        "status": "assumed",
+        "q": "Do negative rushing or receiving yards subtract points?",
+        "bylaws": "\"1 point per 10 rushing yards (.1 per yard)\" (no mention of negative yardage)",
+        "assumption": "Yes, literally: -11 rushing yards is -1.1 points (Justin Jefferson lost 11 yards on one carry in Week 5)."
+      },
+      {
+        "id": "other-td",
+        "status": "assumed",
+        "q": "Which touchdowns count as \"other\" touchdowns (6 points)?",
+        "bylaws": "\"6 points per Fumble recovery touchdown or \"other\" touchdown\"",
+        "assumption": "Fumble-recovery, kick-return, punt-return and blocked-kick-return touchdowns. No Week 5 ToC player had one."
+      },
+      {
+        "id": "tie-break",
+        "status": "open",
+        "q": "If two teams tie for the lowest weekly score, who is demoted or eliminated?",
+        "bylaws": "No weekly tie-break found. The only tie-break in the bylaws is for playoff seeding: \"(tie-breaker is max points for)\"",
+        "assumption": "Not needed in Week 5 (no tie). Left open."
+      }
+    ]
   }
 }

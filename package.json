@@ -2,6 +2,13 @@
   "name": "toc-hub",
   "private": true,
   "type": "module",
-  "scripts": { "build-data": "node scripts/build-data.mjs", "serve": "node scripts/serve.mjs" },
-  "engines": { "node": ">=20" }
+  "scripts": {
+    "build-data": "node scripts/build-data.mjs",
+    "test": "node --test tests/scoring.test.mjs",
+    "replay": "node scripts/replay.mjs",
+    "serve": "node scripts/serve.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
 }
