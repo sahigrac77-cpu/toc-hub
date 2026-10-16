@@ -1,0 +1,38 @@
+name: Update ToC Hub
+
+on:
+  schedule:
+    - cron: '*/15 * * * 0,1,4'   # every 15 min on Sun, Mon, Thu (UTC): game days
+    - cron: '0 */3 * * *'        # every 3 hours otherwise
+  workflow_dispatch:             # lets you run it by hand from the Actions tab
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Pull Sleeper data and build data.json
+        run: node scripts/build-data.mjs
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - id: deployment
+        uses: actions/deploy-pages@v4
