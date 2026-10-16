@@ -1,0 +1,12 @@
+[
+ {
+  "file": "snapshots/2026-10-16/214558Z.json.gz",
+  "at": "2026-10-16T21:45:58.546Z",
+  "sha": "84015fcdc656c7536e151860af18791bde180951d388599a346915982d17191e",
+  "nflWeek": 6,
+  "finalWeeks": [
+   5
+  ],
+  "why": "first snapshot"
+ }
+]
