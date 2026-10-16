@@ -1,0 +1,28 @@
+name: Fix file layout
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Move files into their folders
+        run: |
+          mkdir -p scripts/audit tests docs public
+          mv_if() { if [ -f "$1" ]; then mv -f "$1" "$2"; echo "moved $1 -> $2"; fi; }
+          for f in build-data.mjs toc-scoring.mjs toc-core.mjs archive.mjs ledger.mjs replay.mjs serve.mjs; do mv_if "$f" scripts/; done
+          mv_if bylaws-scorer.mjs scripts/audit/
+          for f in scoring.test.mjs stat-lines.json expected.json external-checks.json sheet-tab-1036520438.csv sheet-tab-1495817998.csv; do mv_if "$f" tests/; done
+          mv_if VERIFICATION.md docs/
+          for f in index.html data.json ledger.json; do mv_if "$f" public/; done
+          git config user.name "toc-hub-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "Nothing to move"; else git commit -m "Move files into their folders" && git push; fi
+          echo "--- files now ---"
+          git ls-files
