@@ -8,5 +8,15 @@
    5
   ],
   "why": "first snapshot"
+ },
+ {
+  "file": "snapshots/2026-10-17/072540Z.json.gz",
+  "at": "2026-10-17T07:25:40.911Z",
+  "sha": "c6113cd55bdfe5cb32e1c118e3cd3b3aa0f9e7591bec3c495266deb2a66c7335",
+  "nflWeek": 6,
+  "finalWeeks": [
+   5
+  ],
+  "why": "data changed and >= 6h since last"
  }
 ]
