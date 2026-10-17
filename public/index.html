@@ -160,14 +160,15 @@ function lineupTable(rows, W){
   return h+'</tbody></table></div>';
 }
 function revivalTable(rows, W){
-  const last = rows.length-1;
-  let h = `<div class="tablebox"><table><thead><tr><th class="n">#</th><th>Team</th><th>Sub-league</th><th class="n">Week</th><th class="n">Gap to last</th><th class="n">ToC total</th><th></th></tr></thead><tbody>`;
+  const last = rows.length-1, slots = rows[0].lineup.map(l=>l.slot);
+  let h = `<div class="tablebox"><table class="lt"><thead><tr><th class="n">#</th><th>Team</th><th>Sub-league</th><th class="n">Week</th><th class="n">Gap to last</th><th class="n">ToC total</th>${slots.map(s=>`<th>${s}</th>`).join('')}<th></th></tr></thead><tbody>`;
   rows.forEach((r,i)=>{
     r._k = 'r'+i;
     const gap = r.pts - rows[last].pts;
     const cls = i===last ? 'bad' : (gap < 5 ? 'warn' : '');
-    h += `<tr class="row ${cls}" data-k="${r._k}"><td class="n">${i+1}</td><td class="${r.owner===ME?'me':''}">${esc(r.owner)}</td><td>${esc(r.league)}</td><td class="n"><b>${f2(r.pts)}</b></td><td class="n">${i===last?'—':'+'+f2(gap)}</td><td class="n">${f2(r.total)}</td><td>${flagOf(i,last,gap,W,'revival')}</td></tr>`;
-    h += howScored(r, 7);
+    const cells = r.lineup.map(l=>`<td class="pl"><span class="pn">${esc(l.name)}</span><span class="pp">${f2(l.pts)}</span></td>`).join('');
+    h += `<tr class="row ${cls}" data-k="${r._k}"><td class="n">${i+1}</td><td class="tm${r.owner===ME?' me':''}">${esc(r.owner)}</td><td>${esc(r.league)}</td><td class="n"><b>${f2(r.pts)}</b></td><td class="n">${i===last?'—':'+'+f2(gap)}</td><td class="n">${f2(r.total)}</td>${cells}<td>${flagOf(i,last,gap,W,'revival')}</td></tr>`;
+    h += howScored(r, slots.length+7);
   });
   return h+'</tbody></table></div>';
 }
@@ -193,7 +194,7 @@ function renderToc(){
   <p class="lede">The 10 best-ball slots for each team. Click a row to see every player’s stat line and how the points add up.</p>
   ${s.length?lineupTable(s,W):'<p class="note">No teams left.</p>'}
   <h2>Revival bracket <span class="chip">${r.length} teams · lowest score is eliminated</span></h2>
-  <p class="lede">Click a row to see the lineup and the working.</p>
+  <p class="lede">The 10 best-ball slots for each team. Click a row to see every player’s stat line and how the points add up.</p>
   ${r.length?revivalTable(r,W):'<p class="note">No teams in this bracket.</p>'}
   <p class="note">Eliminated so far: ${T.eliminated.map(e=>`${esc(e.owner)} (${f2(e.total)})${e.provisional?' <span class="chip warn">provisional</span>':''}`).join(', ')||'none'}. Weekly scores decide who drops, not the total. Amber rows finished within 5 points of last place.</p>`;
   el.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{tocWeek=Number(b.dataset.w);renderToc()}));
