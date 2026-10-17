@@ -5,12 +5,13 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_RULES } from './toc-scoring.mjs';
-import { makeInfo, scoreRoster, rosterAtLock, differential, marginInfo, r2 } from './toc-core.mjs';
+import { makeInfo, scoreRoster, scoreRosterLive, rosterAtLock, differential, marginInfo, r2 } from './toc-core.mjs';
 import { parseSheetCsv, reconcileTeam } from './ledger.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const cfg = JSON.parse(await readFile(join(ROOT, 'config.json'), 'utf8'));
 const API = process.env.SLEEPER_API || 'https://api.sleeper.app/v1';
+const API2 = process.env.SLEEPER_API2 || 'https://api.sleeper.com';
 const OUT = process.env.OUT_FILE || join(ROOT, 'public', 'data.json');
 const RAW_OUT = process.env.RAW_OUT || join(ROOT, 'raw', 'snapshot.json');
 const RULES = cfg.rules;
@@ -29,7 +30,23 @@ async function get(url, tries = 4) {
 }
 // Optional endpoints: never let them break the build, but remember that they failed.
 const missing = [];
-async function getOpt(url) { try { return await get(url, 2); } catch (e) { missing.push(url.replace(API, '')); return null; } }
+async function getOpt(url) { try { return await get(url, 2); } catch (e) { missing.push(url.replace(API2, '').replace(API, '')); return null; } }
+
+// Schedule status and projections for a week that is still being played.
+let scheduleAll;
+async function liveContext(w) {
+  scheduleAll = scheduleAll === undefined ? await getOpt(`${API2}/schedule/nfl/regular/${cfg.season}`) : scheduleAll;
+  const games = (Array.isArray(scheduleAll) ? scheduleAll : []).filter(g => Number(g.week) === w);
+  const pos = ['QB', 'RB', 'WR', 'TE'].map(p => 'position%5B%5D=' + p).join('&');
+  const pj = await getOpt(`${API2}/projections/nfl/${cfg.season}/${w}?season_type=regular&${pos}`);
+  if (!games.length || !Array.isArray(pj) || !pj.length) return null;
+  const gameOfTeam = {};
+  for (const g of games) { gameOfTeam[g.home] = g; gameOfTeam[g.away] = g; }
+  const proj = {};
+  for (const x of pj) if (x.player_id && x.stats) proj[x.player_id] = { stats: x.stats };
+  raw.live = { week: w, schedule: games, projectionCount: pj.length };
+  return { gameOfTeam, proj };
+}
 
 const fetchedAt = new Date().toISOString();
 const raw = { fetchedAt, api: API, season: cfg.season, leagues: {}, stats: {}, players: {} };
@@ -157,12 +174,14 @@ if (latest >= cfg.toc.startWeek) {
     const nameOf = id => { const i = info(id); return i ? i.name : String(id); };
 
     // baseline (bylaws read literally) with full working for every player
+    const liveCtx = isFinal(w) ? null : await liveContext(w);
     const rows = field.map(owner => {
       const at = where[owner], { ids } = idsFor(owner, false), after = idsFor(owner, true).changes;
-      const sc = scoreRoster(ids, stats, info, DEFAULT_RULES, { season: cfg.season, week: w });
-      cum[owner] = r2((cum[owner] || 0) + sc.total);
+      const sc = liveCtx ? scoreRosterLive(ids, stats, info, DEFAULT_RULES, { season: cfg.season, week: w, ...liveCtx }) : scoreRoster(ids, stats, info, DEFAULT_RULES, { season: cfg.season, week: w });
+      cum[owner] = r2((cum[owner] || 0) + (liveCtx ? sc.actual : sc.total));
       return {
         owner, league: at.L.name, team: at.t.team, bracket: surv.has(owner) ? 'survival' : 'revival', pts: sc.total, total: cum[owner], lineup: sc.lineup,
+        ...(liveCtx ? { actual: sc.actual, remaining: sc.remaining } : {}),
         afterLock: after.map(c => ({ type: c.type, at: c.at, ...(c.add ? { add: nameOf(c.add) } : { drop: nameOf(c.drop) }) }))
       };
     });
@@ -201,7 +220,7 @@ if (latest >= cfg.toc.startWeek) {
         if (open.length) { st = 'stands'; reasons.push(`Rules still unconfirmed by the commissioner: ${open.map(q => q.id).join(', ')}. The result is the same under every reading tested.`); }
       }
     }
-    toc.weeks[w] = { final, lockedAt: new Date(lockMs).toISOString(), survival: s, revival: v, demoted, eliminated, margins, variants, verdict: { state: st, reasons } };
+    toc.weeks[w] = { final, projected: !!liveCtx, lockedAt: new Date(lockMs).toISOString(), survival: s, revival: v, demoted, eliminated, margins, variants, verdict: { state: st, reasons } };
     if (final) {
       if (eliminated) { rev.delete(eliminated); toc.eliminated.push({ owner: eliminated, total: cum[eliminated], week: w, provisional: st !== 'final' }); }
       if (demoted) { surv.delete(demoted); rev.add(demoted); }
