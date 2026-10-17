@@ -46,6 +46,10 @@ tr.row{cursor:pointer}tr.row:hover td{background:var(--soft)}
 .lt td.pl{padding:6px 10px;min-width:118px}
 .lt .pn{display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis;max-width:130px}
 .lt .pp{display:block;font:500 12px var(--mono);color:var(--muted)}
+.lt td.up .pn{font-style:italic;color:var(--muted)}.lt td.up .pp{font-style:italic}
+.lt td.lv .pp{color:var(--warn)}
+.lt .pj{display:block;font:11px var(--mono);color:var(--muted);white-space:nowrap}
+.lt td.up,.lt td.lv{background:color-mix(in srgb,var(--warn-bg) 55%,transparent)}
 .lt td.tm{font-weight:600;position:sticky;left:0;background:var(--panel)}
 .lt th:nth-child(2){position:sticky;left:0;background:var(--soft)}
 tr.bad td:first-child{box-shadow:inset 3px 0 var(--bad)}tr.warn td:first-child{box-shadow:inset 3px 0 var(--warn)}
@@ -137,37 +141,49 @@ const flagOf = (i,last,gap,W,br) => {
   const lvl = m ? m.level : 'clear';
   return `<span class="chip ${lvl==='inside'?'bad':'warn'}">Lowest${m?` · by ${f2(m.margin)}`:''}</span>`;
 };
+
+const DAY = d => { try{ return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d+'T12:00:00Z').getUTCDay()]; }catch(e){ return ''; } };
+function slotCell(l){
+  if(!l.id) return '<td class="pl"><span class="pn">Empty</span><span class="pp">0.00</span></td>';
+  const st = l.state||'final';
+  if(st==='upcoming') return `<td class="pl up"><span class="pn">${esc(l.name)}</span><span class="pp">${f2(l.pts)} proj</span><span class="pj">${esc(l.opp)} ${DAY(l.date)}</span></td>`;
+  if(st==='live') return `<td class="pl lv"><span class="pn">${esc(l.name)}</span><span class="pp">${f2(l.actual)} live</span><span class="pj">proj ${f2(l.pts)}</span></td>`;
+  if(st==='bye') return `<td class="pl up"><span class="pn">${esc(l.name)}</span><span class="pp">bye</span></td>`;
+  return `<td class="pl"><span class="pn">${esc(l.name)}</span><span class="pp">${f2(l.pts)}</span></td>`;
+}
+const weekCell = r => r.actual!==undefined ? `<b>${f2(r.pts)}</b><span class="pj">${f2(r.actual)} played${r.remaining?` · ${r.remaining} to play`:''}</span>` : `<b>${f2(r.pts)}</b>`;
+const projNote = W => W.projected ? '<p class="note"><b>Projected lineups.</b> Players whose games have not been played are filled in from Sleeper’s projections, scored with the ToC rules (italic, marked “proj”, with opponent and day). Games in progress show points so far and the projection. Week totals add real points from finished games to projections for the rest, so they will move until the week ends. Projections are estimates, not results.</p>' : (W.final?'':'<p class="note">Projections were not available on the last update, so this week shows points scored so far only.</p>');
 function howScored(r, cols){
   const rows = r.lineup.filter(l=>l.id).map(l=>{
     const st = Object.entries(l.stat||{}).map(([k,v])=>`${k} ${v}`).join(', ') || 'no scoring stats';
     const work = (l.parts||[]).map(p=>`${esc(p.label)} ${f2(p.pts)}`).join('; ');
-    return `<tr><td>${l.slot}</td><td>${esc(l.name)} <span class="mini">${esc(l.pos)}${l.team?' · '+esc(l.team):''}</span></td><td class="stat">${esc(st)}</td><td class="work">${work}</td><td class="n"><b>${f2(l.pts)}</b></td><td>${l.src?`<a href="${esc(l.src)}" target="_blank" rel="noopener">stat line ↗</a>`:''}</td></tr>`;
+    return `<tr><td>${l.slot}</td><td>${esc(l.name)} <span class="mini">${esc(l.pos)}${l.team?' · '+esc(l.team):''}${l.opp&&l.state!=='final'?' · '+esc(l.opp)+' '+DAY(l.date):''}</span></td><td class="stat">${esc(st)}</td><td class="work">${work}</td><td class="n"><b>${f2(l.pts)}</b>${l.state==='upcoming'?'<span class="mini" style="margin:0;display:block">projected</span>':l.state==='live'?'<span class="mini" style="margin:0;display:block">live, proj</span>':''}</td><td>${l.src?`<a href="${esc(l.src)}" target="_blank" rel="noopener">stat line ↗</a>`:''}</td></tr>`;
   }).join('');
   const moves = (r.afterLock||[]).length ? `<p class="mini"><b>Roster moves after Thursday kickoff:</b> ${r.afterLock.map(c=>`${esc(c.add?'added '+c.add:'dropped '+c.drop)} (${esc(c.at.slice(5,16).replace('T',' '))} UTC)`).join('; ')}</p>` : '';
   return `<tr hidden id="lu-${r._k}"><td colspan="${cols}" style="padding:0"><div class="how"><div class="tablebox" style="margin:0"><table><thead><tr><th>Slot</th><th>Player</th><th>Stat line (Sleeper)</th><th>How it adds up</th><th class="n">Pts</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>${moves}<p class="mini">The best 10 of ${r.lineup.length ? 'the rostered players' : ''} are chosen so the total is the highest possible for the slots. Each “stat line” link opens Sleeper’s raw numbers for that player and week.</p></div></td></tr>`;
 };
 function lineupTable(rows, W){
   const last = rows.length-1, slots = rows[0].lineup.map(l=>l.slot);
-  let h = `<div class="tablebox"><table class="lt"><thead><tr><th class="n">#</th><th>Team</th><th class="n">Week</th><th class="n">Gap to last</th>${slots.map(s=>`<th>${s}</th>`).join('')}<th></th></tr></thead><tbody>`;
+  let h = `<div class="tablebox"><table class="lt"><thead><tr><th class="n">#</th><th>Team</th><th class="n">${W.projected?'Projected week':'Week'}</th><th class="n">Gap to last</th>${slots.map(s=>`<th>${s}</th>`).join('')}<th></th></tr></thead><tbody>`;
   rows.forEach((r,i)=>{
     r._k = 's'+i;
     const gap = r.pts - rows[last].pts;
     const cls = i===last ? 'bad' : (gap < 5 ? 'warn' : '');
-    const cells = r.lineup.map(l=>`<td class="pl"><span class="pn">${esc(l.name)}</span><span class="pp">${f2(l.pts)}</span></td>`).join('');
-    h += `<tr class="row ${cls}" data-k="${r._k}"><td class="n">${i+1}</td><td class="tm${r.owner===ME?' me':''}">${esc(r.owner)}</td><td class="n"><b>${f2(r.pts)}</b></td><td class="n">${i===last?'—':'+'+f2(gap)}</td>${cells}<td>${flagOf(i,last,gap,W,'survival')}</td></tr>`;
+    const cells = r.lineup.map(slotCell).join('');
+    h += `<tr class="row ${cls}" data-k="${r._k}"><td class="n">${i+1}</td><td class="tm${r.owner===ME?' me':''}">${esc(r.owner)}</td><td class="n">${weekCell(r)}</td><td class="n">${i===last?'—':'+'+f2(gap)}</td>${cells}<td>${flagOf(i,last,gap,W,'survival')}</td></tr>`;
     h += howScored(r, slots.length+5);
   });
   return h+'</tbody></table></div>';
 }
 function revivalTable(rows, W){
   const last = rows.length-1, slots = rows[0].lineup.map(l=>l.slot);
-  let h = `<div class="tablebox"><table class="lt"><thead><tr><th class="n">#</th><th>Team</th><th>Sub-league</th><th class="n">Week</th><th class="n">Gap to last</th><th class="n">ToC total</th>${slots.map(s=>`<th>${s}</th>`).join('')}<th></th></tr></thead><tbody>`;
+  let h = `<div class="tablebox"><table class="lt"><thead><tr><th class="n">#</th><th>Team</th><th>Sub-league</th><th class="n">${W.projected?'Projected week':'Week'}</th><th class="n">Gap to last</th><th class="n">ToC total</th>${slots.map(s=>`<th>${s}</th>`).join('')}<th></th></tr></thead><tbody>`;
   rows.forEach((r,i)=>{
     r._k = 'r'+i;
     const gap = r.pts - rows[last].pts;
     const cls = i===last ? 'bad' : (gap < 5 ? 'warn' : '');
-    const cells = r.lineup.map(l=>`<td class="pl"><span class="pn">${esc(l.name)}</span><span class="pp">${f2(l.pts)}</span></td>`).join('');
-    h += `<tr class="row ${cls}" data-k="${r._k}"><td class="n">${i+1}</td><td class="tm${r.owner===ME?' me':''}">${esc(r.owner)}</td><td>${esc(r.league)}</td><td class="n"><b>${f2(r.pts)}</b></td><td class="n">${i===last?'—':'+'+f2(gap)}</td><td class="n">${f2(r.total)}</td>${cells}<td>${flagOf(i,last,gap,W,'revival')}</td></tr>`;
+    const cells = r.lineup.map(slotCell).join('');
+    h += `<tr class="row ${cls}" data-k="${r._k}"><td class="n">${i+1}</td><td class="tm${r.owner===ME?' me':''}">${esc(r.owner)}</td><td>${esc(r.league)}</td><td class="n">${weekCell(r)}</td><td class="n">${i===last?'—':'+'+f2(gap)}</td><td class="n">${f2(r.total)}</td>${cells}<td>${flagOf(i,last,gap,W,'revival')}</td></tr>`;
     h += howScored(r, slots.length+7);
   });
   return h+'</tbody></table></div>';
@@ -176,7 +192,7 @@ function verdictBox(W){
   const v = W.verdict || {state:W.final?'stands':'live',reasons:[]};
   const res = [W.demoted?`<b>${esc(W.demoted)}</b> demoted`:'', W.eliminated?`<b>${esc(W.eliminated)}</b> eliminated`:''].filter(Boolean).join(' · ');
   const head = {final:'Final.', stands:'', provisional:'Provisional, not safe to call yet.', live:'Live.'}[v.state];
-  const lead = v.state==='live' ? 'Games are still being played, so scores and the order will change. The last row in each table is the lowest right now, not a result.' : (res?res+'.':'No demotion or elimination this week.');
+  const lead = v.state==='live' ? 'Games are still being played. The order uses points scored so far plus projections for games still to come, so it will change. The last row in each table is the projected lowest, not a result.' : (res?res+'.':'No demotion or elimination this week.');
   const cls = v.state==='final' ? 'ok' : v.state==='provisional' ? 'warnb' : '';
   return `<div class="status ${cls}"><div><b>${head?head+'</b> ':'</b>'}${lead}${v.reasons.length&&v.state!=='stands'?`<ul class="why">${v.reasons.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}</div></div>`;
 }
@@ -192,6 +208,7 @@ function renderToc(){
   ${verdictBox(W)}
   <h2>Survival bracket <span class="chip">${s.length} teams · lowest score is demoted</span></h2>
   <p class="lede">The 10 best-ball slots for each team. Click a row to see every player’s stat line and how the points add up.</p>
+  ${projNote(W)}
   ${s.length?lineupTable(s,W):'<p class="note">No teams left.</p>'}
   <h2>Revival bracket <span class="chip">${r.length} teams · lowest score is eliminated</span></h2>
   <p class="lede">The 10 best-ball slots for each team. Click a row to see every player’s stat line and how the points add up.</p>
