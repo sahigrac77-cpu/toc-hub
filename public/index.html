@@ -136,8 +136,8 @@ let curLeague = null, tocWeek = null;
 
 /* ---------- ToC ---------- */
 const flagOf = (i,last,gap,W,br) => {
-  const nd = br==='survival' ? (W.demotedAll||[]).length : 1;
-  if(i!==last && i>last-nd) return '<span class="chip warn">Lowest 2 · demoted</span>';
+  const nd = br==='survival' ? (W.demotedAll||[]).length : (W.eliminatedAll||[]).length||1;
+  if(i!==last && i>last-nd) return `<span class="chip warn">Lowest ${nd} · ${br==='survival'?'demoted':'eliminated'}</span>`;
   if(i!==last) return gap < 5 ? '<span class="chip warn">Close call</span>' : '';
   const m = W.margins && W.margins[br];
   const lvl = m ? m.level : 'clear';
@@ -193,7 +193,7 @@ function revivalTable(rows, W){
 function verdictBox(W){
   const v = W.verdict || {state:W.final?'stands':'live',reasons:[]};
   const dem = W.demotedAll||(W.demoted?[W.demoted]:[]);
-  const res = [dem.length?`<b>${dem.map(esc).join('</b> and <b>')}</b> demoted`:'', W.eliminated?`<b>${esc(W.eliminated)}</b> eliminated`:''].filter(Boolean).join(' · ');
+  const res = [dem.length?`<b>${dem.map(esc).join('</b> and <b>')}</b> demoted`:'', (W.eliminatedAll&&W.eliminatedAll.length)||W.eliminated?`<b>${(W.eliminatedAll||[W.eliminated]).map(esc).join('</b> and <b>')}</b> eliminated`:''].filter(Boolean).join(' · ');
   const head = {final:'Final.', stands:'', provisional:'Provisional, not safe to call yet.', live:'Live.'}[v.state];
   const lead = W.preview ? 'This week has not started yet. Every lineup below is built from projections and will change as rosters, injuries and projections update.' : v.state==='live' ? 'Games are still being played. The order uses points scored so far plus projections for games still to come, so it will change. The last row in each table is the projected lowest, not a result.' : (res?res+'.':'No demotion or elimination this week.');
   const cls = v.state==='final' ? 'ok' : v.state==='provisional' ? 'warnb' : '';
@@ -214,7 +214,7 @@ function renderToc(){
   <p class="lede">The 10 best-ball slots for each team. Click a row to see every player’s stat line and how the points add up.</p>
   ${projNote(W)}
   ${s.length?lineupTable(s,W):'<p class="note">No teams left.</p>'}
-  <h2>Revival bracket <span class="chip">${r.length} teams · lowest score is eliminated</span></h2>
+  <h2>Revival bracket <span class="chip">${r.length} teams · ${(W.eliminatedAll||[]).length>1?'lowest '+W.eliminatedAll.length+' scores are eliminated':'lowest score is eliminated'}</span></h2>
   <p class="lede">The 10 best-ball slots for each team. Click a row to see every player’s stat line and how the points add up.</p>
   ${r.length?revivalTable(r,W):'<p class="note">No teams in this bracket.</p>'}
   <p class="note">Eliminated so far: ${T.eliminated.map(e=>`${esc(e.owner)} (${f2(e.total)})${e.provisional?' <span class="chip warn">provisional</span>':''}`).join(', ')||'none'}. Weekly scores decide who drops, not the total. Amber rows finished within 5 points of last place.</p>`;
