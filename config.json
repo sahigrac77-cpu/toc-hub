@@ -93,10 +93,11 @@
     "questions": [
       {
         "id": "qb-reception",
-        "status": "assumed",
+        "status": "answered",
         "q": "Does a quarterback earn points for a reception?",
         "bylaws": "\"1 point per reception for Running Backs and Wide Receivers\"; \"2 points per reception for Tight Ends\" (quarterbacks not listed)",
-        "assumption": "No. Only RB, WR and TE score receptions. The commissioner sheet gave a QB 1 point in Week 5 (Jacoby Brissett), so the two disagree."
+        "assumption": "No. Only RB, WR and TE score receptions. The commissioner sheet gave a QB 1 point in Week 5 (Jacoby Brissett), so the two disagree.",
+        "answer": "Yes. A quarterback earns 1 point per reception (commissioner ruling relayed 2026-10-20). Scoring now applies it."
       },
       {
         "id": "combined-100",
@@ -114,10 +115,11 @@
       },
       {
         "id": "stat-corrections",
-        "status": "assumed",
+        "status": "answered",
         "q": "Do official stat corrections made after a week closes change the result?",
         "bylaws": "No rule found.",
-        "assumption": "Yes while the week is within a few days of closing; the site always uses the latest Sleeper stats and shows when they last changed."
+        "assumption": "Yes while the week is within a few days of closing; the site always uses the latest Sleeper stats and shows when they last changed.",
+        "answer": "Stat corrections count until Thursday (the next week's Thursday kickoff). After that the week is closed (ruling relayed 2026-10-20)."
       },
       {
         "id": "negative-yards",
@@ -139,6 +141,13 @@
         "q": "If two teams tie for the lowest weekly score, who is demoted or eliminated?",
         "bylaws": "No weekly tie-break found. The only tie-break in the bylaws is for playoff seeding: \"(tie-breaker is max points for)\"",
         "assumption": "Not needed in Week 5 (no tie). Left open."
+      },
+      {
+        "id": "official-source",
+        "status": "answered",
+        "q": "Which weekly score is official: the commissioner's sheet or Sleeper?",
+        "bylaws": "Not stated.",
+        "answer": "Sleeper's numbers are official (ruling relayed 2026-10-20). Where the sheet differs, Sleeper's stat lines decide."
       }
     ]
   }

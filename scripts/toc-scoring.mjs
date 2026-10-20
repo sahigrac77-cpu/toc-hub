@@ -4,9 +4,9 @@ export const SLOTS = ['QB', 'RB', 'RB', 'WR', 'WR', 'TE', 'FLEX', 'FLEX', 'FLEX'
 const ELIGIBLE = { QB: ['QB'], RB: ['RB'], WR: ['WR'], TE: ['TE'], FLEX: ['RB', 'WR', 'TE'], SF: ['QB', 'RB', 'WR', 'TE'] };
 
 // Interpretations the bylaws leave open. Defaults are the literal reading of the bylaws text.
-//  qbReceptionPoints : points per reception for a QB (bylaws list RB/WR = 1 and TE = 2, QB not listed -> 0)
+//  qbReceptionPoints : points per reception for a QB. Bylaws list RB/WR = 1 and TE = 2 and do not name QBs; the commissioner ruled (2026-10-20) that a QB earns 1.
 //  combined100Bonus  : also give +2 when rushing+receiving yards together reach 100 (Format list says "100+ Rushing/Receiving Yards")
-export const DEFAULT_RULES = { qbReceptionPoints: 0, combined100Bonus: false };
+export const DEFAULT_RULES = { qbReceptionPoints: 1, combined100Bonus: false };
 
 const r2 = n => Math.round(n * 100) / 100;
 const OTHER_TD_KEYS = ['fum_rec_td', 'kr_td', 'pr_td', 'st_td', 'blk_kick_ret_td'];

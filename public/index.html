@@ -194,7 +194,8 @@ function verdictBox(W){
   const head = {final:'Final.', stands:'', provisional:'Provisional, not safe to call yet.', live:'Live.'}[v.state];
   const lead = W.preview ? 'This week has not started yet. Every lineup below is built from projections and will change as rosters, injuries and projections update.' : v.state==='live' ? 'Games are still being played. The order uses points scored so far plus projections for games still to come, so it will change. The last row in each table is the projected lowest, not a result.' : (res?res+'.':'No demotion or elimination this week.');
   const cls = v.state==='final' ? 'ok' : v.state==='provisional' ? 'warnb' : '';
-  return `<div class="status ${cls}"><div><b>${head?head+'</b> ':'</b>'}${lead}${v.reasons.length&&v.state!=='stands'?`<ul class="why">${v.reasons.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}</div></div>`;
+  const closes = W.final && W.correctionsCloseAt && Date.now() < Date.parse(W.correctionsCloseAt) ? `<span class="mini">Stat corrections still count until Thursday ${new Date(W.correctionsCloseAt).toLocaleString([], {weekday:'short', hour:'2-digit', minute:'2-digit'})}.</span>` : '';
+  return `<div class="status ${cls}"><div><b>${head?head+'</b> ':'</b>'}${lead}${v.reasons.length&&v.state!=='stands'?`<ul class="why">${v.reasons.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}${closes}</div></div>`;
 }
 function renderToc(){
   const T = D.toc, ws = Object.keys(T.weeks).map(Number).sort((a,b)=>a-b);

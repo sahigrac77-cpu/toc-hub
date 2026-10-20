@@ -154,7 +154,7 @@ let audit = null, priorProvisional = false, ledgerOut = null;
 const statsCache = {};
 
 const VARIANTS = [
-  { id: 'qb-reception', label: 'a quarterback earns 1 point per reception', rules: { ...DEFAULT_RULES, qbReceptionPoints: 1 } },
+  { id: 'qb-reception', label: 'a quarterback earns no points for a reception', rules: { ...DEFAULT_RULES, qbReceptionPoints: 0 } },
   { id: 'combined-100', label: 'the 100-yard bonus also counts rushing + receiving combined', rules: { ...DEFAULT_RULES, combined100Bonus: true } },
   { id: 'roster-lock', label: 'rosters lock at the first Thursday kickoff', rules: DEFAULT_RULES, lock: true }
 ];
@@ -196,7 +196,8 @@ if (tocLatest >= cfg.toc.startWeek) {
     const final = isFinal(w);
 
     // same week, other readings of the rules the bylaws leave open
-    const variants = VARIANTS.map(V => {
+    const answeredIds = new Set(RULES.questions.filter(q => q.status === 'answered').map(q => q.id));
+    const variants = VARIANTS.filter(V => !answeredIds.has(V.id)).map(V => {
       if (V.lock && !txOk) return { id: V.id, label: V.label, unavailable: true };
       const tot = field.map(owner => {
         const { ids } = idsFor(owner, !!V.lock);
@@ -224,7 +225,7 @@ if (tocLatest >= cfg.toc.startWeek) {
         if (open.length) { st = 'stands'; reasons.push(`Rules still unconfirmed by the commissioner: ${open.map(q => q.id).join(', ')}. The result is the same under every reading tested.`); }
       }
     }
-    toc.weeks[w] = { final, projected: !!liveCtx, preview: w > latest, lockedAt: new Date(lockMs).toISOString(), survival: s, revival: v, demoted, eliminated, margins, variants, verdict: { state: st, reasons } };
+    toc.weeks[w] = { final, projected: !!liveCtx, preview: w > latest, lockedAt: new Date(lockMs).toISOString(), correctionsCloseAt: new Date(lockMs + 7 * 864e5).toISOString(), survival: s, revival: v, demoted, eliminated, margins, variants, verdict: { state: st, reasons } };
     if (final) {
       if (eliminated) { rev.delete(eliminated); toc.eliminated.push({ owner: eliminated, total: cum[eliminated], week: w, provisional: st !== 'final' }); }
       if (demoted) { surv.delete(demoted); rev.add(demoted); }

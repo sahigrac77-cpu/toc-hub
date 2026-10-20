@@ -11,6 +11,7 @@ export const BYLAWS_RULES = [
   { q: '1 point per reception for Running Backs and Wide Receivers', h: (s, pos) => (pos === 'RB' || pos === 'WR') ? 100 * s.rec : 0 },
   { q: '0.25 points per carry',                              h: (s) => 25 * s.rush_att },
   { q: '2 points per reception for Tight Ends',              h: (s, pos) => pos === 'TE' ? 200 * s.rec : 0 },
+  { q: 'Commissioner ruling, 2026-10-20: 1 point per reception for Quarterbacks', h: (s, pos) => pos === 'QB' ? 100 * s.rec : 0 },
   { q: '6 points per passing touchdown',                     h: (s) => 600 * s.pass_td },
   { q: '6 points per rushing touchdown',                     h: (s) => 600 * s.rush_td },
   { q: '6 points per receiving touchdown',                   h: (s) => 600 * s.rec_td },
