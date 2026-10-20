@@ -426,10 +426,19 @@ document.querySelectorAll('nav.tabs [data-t]').forEach(b=>b.addEventListener('cl
 $('#themeBtn').addEventListener('click',()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=dark?'light':'dark'});
 
 function ago(iso){const m=Math.round((Date.now()-new Date(iso))/60000);return m<2?'just now':m<60?m+' minutes ago':m<2880?Math.round(m/60)+' hours ago':Math.round(m/1440)+' days ago'}
+/* The GitHub Pages copy is refreshed by the update job every few minutes. A copy of this page hosted elsewhere
+   (for example on Vercel) reads the newest data from either its own host or the Pages host, so it is never stale. */
+const PAGES_BASE = 'https://sahigrac77-cpu.github.io/toc-hub/';
+async function fetchData(){
+  const bases = location.hostname.endsWith('github.io') ? [''] : ['', PAGES_BASE];
+  const got = await Promise.all(bases.map(async b => { try{ const r = await fetch(b+'data.json?_='+Date.now()); return r.ok ? await r.json() : null; }catch(e){ return null; } }));
+  const ok = got.filter(Boolean).sort((a,b)=>String(b.meta.generatedAt).localeCompare(String(a.meta.generatedAt)));
+  if(!ok.length) throw new Error('no data');
+  return ok[0];
+}
 async function load(){
   try{
-    const r = await fetch('data.json?_='+Date.now()); if(!r.ok) throw new Error(r.status);
-    D = await r.json(); ME = D.meta.me || '';
+    D = await fetchData(); ME = D.meta.me || '';
     $('#updated').innerHTML = `Updated ${ago(D.meta.generatedAt)} · data through Week ${D.meta.latestWeek}${D.meta.liveWeek?' <span class="chip warn">live</span>':''}`;
     Object.keys(done).forEach(k=>delete done[k]);
     show((location.hash||'#toc').slice(1));
