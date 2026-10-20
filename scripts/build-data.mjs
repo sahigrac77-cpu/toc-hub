@@ -191,7 +191,9 @@ if (tocLatest >= cfg.toc.startWeek) {
     });
     rows.sort((a, b) => b.pts - a.pts);
     const s = rows.filter(r => r.bracket === 'survival'), v = rows.filter(r => r.bracket === 'revival');
-    const demoted = s.length > 1 ? s[s.length - 1].owner : null;
+    const nDem = Math.min(Number((cfg.toc.demotions || {})[w]) || 1, Math.max(s.length - 1, 0));
+    const demotedAll = s.slice(s.length - nDem).reverse().map(r => r.owner);   // lowest first
+    const demoted = demotedAll[0] || null;
     const eliminated = v.length ? v[v.length - 1].owner : null;
     const final = isFinal(w);
 
@@ -203,13 +205,13 @@ if (tocLatest >= cfg.toc.startWeek) {
         const { ids } = idsFor(owner, !!V.lock);
         return { owner, bracket: surv.has(owner) ? 'survival' : 'revival', pts: scoreRoster(ids, stats, info, V.rules).total };
       });
-      const lo = br => { const t = tot.filter(x => x.bracket === br).sort((a, b) => a.pts - b.pts); return t.length ? t[0].owner : null; };
-      const d = s.length > 1 ? lo('survival') : null, e = v.length ? lo('revival') : null;
+      const lo = (br, n) => tot.filter(x => x.bracket === br).sort((a, b) => a.pts - b.pts).slice(0, n).map(x => x.owner);
+      const d = nDem ? lo('survival', nDem).join('+') : null, e = v.length ? lo('revival', 1)[0] : null;
       const moved = tot.map(x => ({ owner: x.owner, delta: r2(x.pts - rows.find(r => r.owner === x.owner).pts) })).filter(x => Math.abs(x.delta) > 0.004);
-      return { id: V.id, label: V.label, demoted: d, eliminated: e, flips: d !== demoted || e !== eliminated, moved };
+      return { id: V.id, label: V.label, demoted: d, eliminated: e, flips: d !== (demotedAll.length ? [...demotedAll].join('+') : null) || e !== eliminated, moved };
     });
 
-    const margins = { survival: marginInfo(s, RULES.margins), revival: marginInfo(v, RULES.margins) };
+    const margins = { survival: marginInfo(s, RULES.margins, nDem || 1), revival: marginInfo(v, RULES.margins) };
     const reasons = []; let st = 'final';
     if (!final) { st = 'live'; reasons.push(w > latest ? 'This week has not started yet: every lineup is projections only.' : 'The NFL week is still in progress.'); }
     else {
@@ -225,10 +227,10 @@ if (tocLatest >= cfg.toc.startWeek) {
         if (open.length) { st = 'stands'; reasons.push(`Rules still unconfirmed by the commissioner: ${open.map(q => q.id).join(', ')}. The result is the same under every reading tested.`); }
       }
     }
-    toc.weeks[w] = { final, projected: !!liveCtx, preview: w > latest, lockedAt: new Date(lockMs).toISOString(), correctionsCloseAt: new Date(lockMs + 7 * 864e5).toISOString(), survival: s, revival: v, demoted, eliminated, margins, variants, verdict: { state: st, reasons } };
+    toc.weeks[w] = { final, projected: !!liveCtx, preview: w > latest, lockedAt: new Date(lockMs).toISOString(), correctionsCloseAt: new Date(lockMs + 7 * 864e5).toISOString(), survival: s, revival: v, demoted, demotedAll, eliminated, margins, variants, verdict: { state: st, reasons } };
     if (final) {
       if (eliminated) { rev.delete(eliminated); toc.eliminated.push({ owner: eliminated, total: cum[eliminated], week: w, provisional: st !== 'final' }); }
-      if (demoted) { surv.delete(demoted); rev.add(demoted); }
+      for (const o of demotedAll) { surv.delete(o); rev.add(o); }
       if (st === 'provisional') priorProvisional = true;
     }
     toc.latestWeek = w;

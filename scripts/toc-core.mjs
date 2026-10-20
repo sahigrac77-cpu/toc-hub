@@ -61,11 +61,11 @@ export function differential(ids, stats, info) {
 }
 
 // How decisive is the lowest score? margin = gap to the next-lowest team.
-export function marginInfo(rows, cfg) {
-  if (rows.length < 2) return null;
-  const s = [...rows].sort((a, b) => a.pts - b.pts), margin = r2(s[1].pts - s[0].pts);
+export function marginInfo(rows, cfg, n = 1) {
+  if (rows.length < n + 1) return null;
+  const s = [...rows].sort((a, b) => a.pts - b.pts), margin = r2(s[n].pts - s[n - 1].pts);
   const level = margin < cfg.oneEvent ? 'inside' : margin < cfg.oneTouchdown ? 'watch' : 'clear';
-  return { lowest: s[0].owner, next: s[1].owner, margin, level };
+  return { lowest: s[n - 1].owner, next: s[n].owner, margin, level };
 }
 
 // ---- Live weeks: actual points for games played, projections for games still to come ----------------------------

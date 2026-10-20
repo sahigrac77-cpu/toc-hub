@@ -29,7 +29,7 @@
   ],
   "toc": {
     "startWeek": 5,
-    "note": "Brackets at the start of startWeek. After that the script applies the rule: lowest survival score is demoted, lowest revival score is eliminated, each week.",
+    "note": "Brackets at the start of startWeek. After that the script applies the rule: lowest survival score is demoted, lowest revival score is eliminated, each week. Week 5 demoted two teams (per the Survivor Rules tab); demotions maps a week to the number demoted, default 1.",
     "survival": [
       "mcnutton",
       "Losmika",
@@ -81,6 +81,9 @@
       "WAFFT": 539.95,
       "geojag": 533.57,
       "Snaggler7": 522.77
+    },
+    "demotions": {
+      "5": 2
     }
   },
   "rules": {

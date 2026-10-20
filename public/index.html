@@ -136,6 +136,8 @@ let curLeague = null, tocWeek = null;
 
 /* ---------- ToC ---------- */
 const flagOf = (i,last,gap,W,br) => {
+  const nd = br==='survival' ? (W.demotedAll||[]).length : 1;
+  if(i!==last && i>last-nd) return '<span class="chip warn">Lowest 2 · demoted</span>';
   if(i!==last) return gap < 5 ? '<span class="chip warn">Close call</span>' : '';
   const m = W.margins && W.margins[br];
   const lvl = m ? m.level : 'clear';
@@ -190,7 +192,8 @@ function revivalTable(rows, W){
 }
 function verdictBox(W){
   const v = W.verdict || {state:W.final?'stands':'live',reasons:[]};
-  const res = [W.demoted?`<b>${esc(W.demoted)}</b> demoted`:'', W.eliminated?`<b>${esc(W.eliminated)}</b> eliminated`:''].filter(Boolean).join(' · ');
+  const dem = W.demotedAll||(W.demoted?[W.demoted]:[]);
+  const res = [dem.length?`<b>${dem.map(esc).join('</b> and <b>')}</b> demoted`:'', W.eliminated?`<b>${esc(W.eliminated)}</b> eliminated`:''].filter(Boolean).join(' · ');
   const head = {final:'Final.', stands:'', provisional:'Provisional, not safe to call yet.', live:'Live.'}[v.state];
   const lead = W.preview ? 'This week has not started yet. Every lineup below is built from projections and will change as rosters, injuries and projections update.' : v.state==='live' ? 'Games are still being played. The order uses points scored so far plus projections for games still to come, so it will change. The last row in each table is the projected lowest, not a result.' : (res?res+'.':'No demotion or elimination this week.');
   const cls = v.state==='final' ? 'ok' : v.state==='provisional' ? 'warnb' : '';
@@ -207,7 +210,7 @@ function renderToc(){
   <h2>ToC Week ${tocWeek}</h2>
   <div class="seg">${ws.map(w=>`<button aria-pressed="${w===tocWeek}" data-w="${w}">Week ${w}${T.weeks[w].final?'':(T.weeks[w].preview?' · upcoming':' · live')}</button>`).join('')}</div>
   ${verdictBox(W)}
-  <h2>Survival bracket <span class="chip">${s.length} teams · lowest score is demoted</span></h2>
+  <h2>Survival bracket <span class="chip">${s.length} teams · ${(W.demotedAll||[]).length>1?'lowest '+W.demotedAll.length+' scores are demoted':'lowest score is demoted'}</span></h2>
   <p class="lede">The 10 best-ball slots for each team. Click a row to see every player’s stat line and how the points add up.</p>
   ${projNote(W)}
   ${s.length?lineupTable(s,W):'<p class="note">No teams left.</p>'}
@@ -403,7 +406,7 @@ function renderSPower(){
   const zz = zmap(rows,a=>a.z); rows.forEach((a,i)=>a.z=zz[i]);
   rows.sort((a,b)=>b.z-a.z);
   const body = rows.map((a,i)=>{
-    const g = gradeOf(a.z), r = a.r, cush = r.pts-lowest, demoted = r.owner===W.demoted;
+    const g = gradeOf(a.z), r = a.r, cush = r.pts-lowest, demoted = (W.demotedAll||[W.demoted]).includes(r.owner);
     const risk = demoted ? 'Demoted this week.' : cush < 10 ? 'Danger: only '+f2(cush)+' above the week’s lowest score.' : cush < 30 ? 'Mild risk: '+f2(cush)+' above the cut line.' : 'Safe: '+f2(cush)+' above the cut line.';
     const trend = a.p ? (a.p.l3-a.p.avg > 8 ? 'heating up' : a.p.l3-a.p.avg < -8 ? 'cooling off' : 'steady lately') : '';
     return `<tr><td class="n">${i+1}</td><td class="${r.owner===ME?'me':''}">${esc(r.owner)}<div class="mini" style="margin:0">${esc(r.league)}</div></td><td><span class="chip ${gradeCls(g)}"><b>${g}</b></span></td><td class="n">${score100(a.z)}</td><td class="n"><b>${f2(r.pts)}</b></td><td style="white-space:normal;min-width:340px">${a.x?teamStory(a.x,a.p):''} <b>Week ${ws[ws.length-1]}:</b> carried by ${r.lineup.slice().sort((p,q)=>q.pts-p.pts).slice(0,3).map(l=>`${esc(l.name)} (${f2(l.pts)})`).join(', ')}.<div class="mini" style="margin-top:4px"><b>Why ${g}:</b> ${esc(risk)} ${trend?'Scoring is '+trend+'; ':''}${drivers(keys,a.zs).replace(/^./,c=>c.toLowerCase())}</div></td></tr>`;
