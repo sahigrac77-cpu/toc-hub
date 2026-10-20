@@ -191,10 +191,10 @@ if (tocLatest >= cfg.toc.startWeek) {
     });
     rows.sort((a, b) => b.pts - a.pts);
     const s = rows.filter(r => r.bracket === 'survival'), v = rows.filter(r => r.bracket === 'revival');
-    const nDem = Math.min(Number((cfg.toc.demotions || {})[w]) || 1, Math.max(s.length - 1, 0));
+    const nDem = Math.min(Number((cfg.toc.demotions || {})[w] ?? 1), Math.max(s.length - 1, 0));
     const demotedAll = s.slice(s.length - nDem).reverse().map(r => r.owner);   // lowest first
     const demoted = demotedAll[0] || null;
-    const nElim = Math.min(Number((cfg.toc.eliminations || {})[w]) || 1, v.length);
+    const nElim = Math.min(Number((cfg.toc.eliminations || {})[w] ?? 1), v.length);
     const eliminatedAll = v.slice(v.length - nElim).reverse().map(r => r.owner);   // lowest first
     const eliminated = eliminatedAll[0] || null;
     const final = isFinal(w);
