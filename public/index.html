@@ -192,7 +192,7 @@ function verdictBox(W){
   const v = W.verdict || {state:W.final?'stands':'live',reasons:[]};
   const res = [W.demoted?`<b>${esc(W.demoted)}</b> demoted`:'', W.eliminated?`<b>${esc(W.eliminated)}</b> eliminated`:''].filter(Boolean).join(' · ');
   const head = {final:'Final.', stands:'', provisional:'Provisional, not safe to call yet.', live:'Live.'}[v.state];
-  const lead = v.state==='live' ? 'Games are still being played. The order uses points scored so far plus projections for games still to come, so it will change. The last row in each table is the projected lowest, not a result.' : (res?res+'.':'No demotion or elimination this week.');
+  const lead = W.preview ? 'This week has not started yet. Every lineup below is built from projections and will change as rosters, injuries and projections update.' : v.state==='live' ? 'Games are still being played. The order uses points scored so far plus projections for games still to come, so it will change. The last row in each table is the projected lowest, not a result.' : (res?res+'.':'No demotion or elimination this week.');
   const cls = v.state==='final' ? 'ok' : v.state==='provisional' ? 'warnb' : '';
   return `<div class="status ${cls}"><div><b>${head?head+'</b> ':'</b>'}${lead}${v.reasons.length&&v.state!=='stands'?`<ul class="why">${v.reasons.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}</div></div>`;
 }
@@ -204,7 +204,7 @@ function renderToc(){
   const W = T.weeks[tocWeek], s = W.survival, r = W.revival;
   el.innerHTML = `
   <h2>ToC Week ${tocWeek}</h2>
-  <div class="seg">${ws.map(w=>`<button aria-pressed="${w===tocWeek}" data-w="${w}">Week ${w}${T.weeks[w].final?'':' · live'}</button>`).join('')}</div>
+  <div class="seg">${ws.map(w=>`<button aria-pressed="${w===tocWeek}" data-w="${w}">Week ${w}${T.weeks[w].final?'':(T.weeks[w].preview?' · upcoming':' · live')}</button>`).join('')}</div>
   ${verdictBox(W)}
   <h2>Survival bracket <span class="chip">${s.length} teams · lowest score is demoted</span></h2>
   <p class="lede">The 10 best-ball slots for each team. Click a row to see every player’s stat line and how the points add up.</p>

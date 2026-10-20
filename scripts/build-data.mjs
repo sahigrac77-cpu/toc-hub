@@ -90,6 +90,10 @@ if (new Set(owners).size !== owners.length) console.warn('Warning: duplicate dis
 let latest = 0;
 for (const L of leagues) for (const [w, m] of Object.entries(L.weeks)) if (m.some(x => (x.points || 0) > 0)) latest = Math.max(latest, Number(w));
 const liveWeek = regular && latest >= Number(state.week);
+// When the NFL week has turned over but no game has been scored yet, still show that ToC week (projections only).
+const nflW = Number(state.week) || 0;
+const preview = regular && nflW > latest && nflW <= 18 && latest >= cfg.toc.startWeek && leagues.every(L => (L.weeks[nflW] || []).length > 0);
+const tocLatest = preview ? nflW : latest;
 
 // Who carries each team: season points by starter (Sleeper's own league scoring), plus where the points come from.
 const allPlayers = await getOpt(`${API}/players/nfl`) || {};
@@ -155,11 +159,11 @@ const VARIANTS = [
   { id: 'roster-lock', label: 'rosters lock at the first Thursday kickoff', rules: DEFAULT_RULES, lock: true }
 ];
 
-if (latest >= cfg.toc.startWeek) {
+if (tocLatest >= cfg.toc.startWeek) {
   const players = Object.keys(allPlayers).length ? allPlayers : await get(`${API}/players/nfl`);
   const info = makeInfo(players);
-  for (let w = cfg.toc.startWeek; w <= latest; w++) {
-    const stats = statsCache[w] = await get(`${API}/stats/nfl/regular/${cfg.season}/${w}`);
+  for (let w = cfg.toc.startWeek; w <= tocLatest; w++) {
+    const stats = statsCache[w] = w > latest ? ((await getOpt(`${API}/stats/nfl/regular/${cfg.season}/${w}`)) || {}) : await get(`${API}/stats/nfl/regular/${cfg.season}/${w}`);
     for (const L of leagues) { L.tx[w] = await getOpt(`${API}/league/${L.id}/transactions/${w}`); raw.leagues[L.id].transactions[w] = L.tx[w]; }
     const lockMs = Date.parse(RULES.week1KickoffUtc) + (w - 1) * 7 * 864e5;
     const txOk = leagues.every(L => Array.isArray(L.tx[w]));
@@ -206,7 +210,7 @@ if (latest >= cfg.toc.startWeek) {
 
     const margins = { survival: marginInfo(s, RULES.margins), revival: marginInfo(v, RULES.margins) };
     const reasons = []; let st = 'final';
-    if (!final) { st = 'live'; reasons.push('The NFL week is still in progress.'); }
+    if (!final) { st = 'live'; reasons.push(w > latest ? 'This week has not started yet: every lineup is projections only.' : 'The NFL week is still in progress.'); }
     else {
       for (const x of variants) {
         if (x.unavailable) { st = 'provisional'; reasons.push('Transaction history could not be loaded, so the roster-lock reading was not tested.'); }
@@ -220,7 +224,7 @@ if (latest >= cfg.toc.startWeek) {
         if (open.length) { st = 'stands'; reasons.push(`Rules still unconfirmed by the commissioner: ${open.map(q => q.id).join(', ')}. The result is the same under every reading tested.`); }
       }
     }
-    toc.weeks[w] = { final, projected: !!liveCtx, lockedAt: new Date(lockMs).toISOString(), survival: s, revival: v, demoted, eliminated, margins, variants, verdict: { state: st, reasons } };
+    toc.weeks[w] = { final, projected: !!liveCtx, preview: w > latest, lockedAt: new Date(lockMs).toISOString(), survival: s, revival: v, demoted, eliminated, margins, variants, verdict: { state: st, reasons } };
     if (final) {
       if (eliminated) { rev.delete(eliminated); toc.eliminated.push({ owner: eliminated, total: cum[eliminated], week: w, provisional: st !== 'final' }); }
       if (demoted) { surv.delete(demoted); rev.add(demoted); }

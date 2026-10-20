@@ -20,6 +20,8 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -65,3 +67,16 @@ jobs:
           path: public
       - id: deployment
         uses: actions/deploy-pages@v4
+
+      # Ask Vercel to rebuild so its copy of the site is fresh too. Skipped unless the VERCEL_DEPLOY_HOOK secret exists.
+      # On scheduled runs it fires at most about once an hour (Vercel's free plan allows 100 deployments a day).
+      - name: Refresh Vercel
+        if: ${{ always() && env.VERCEL_DEPLOY_HOOK != '' }}
+        continue-on-error: true
+        run: |
+          M=$(date -u +%M)
+          if [ "$GITHUB_EVENT_NAME" != "schedule" ] || [ "$((10#$M))" -lt 20 ]; then
+            curl -fsS -X POST "$VERCEL_DEPLOY_HOOK" && echo "Vercel rebuild requested"
+          else
+            echo "Skipped Vercel rebuild this run"
+          fi
