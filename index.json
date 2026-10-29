@@ -401,5 +401,17 @@
    7
   ],
   "why": "data changed and >= 6h since last"
+ },
+ {
+  "file": "snapshots/2026-10-29/200128Z.json.gz",
+  "at": "2026-10-29T20:01:28.475Z",
+  "sha": "5f09a9d8a7085a9be6dda3222469f7db595ed7be6344c99ff92dc92d967aedf2",
+  "nflWeek": 8,
+  "finalWeeks": [
+   5,
+   6,
+   7
+  ],
+  "why": "data changed and >= 6h since last"
  }
 ]
