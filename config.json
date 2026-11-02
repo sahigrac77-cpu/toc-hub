@@ -28,7 +28,7 @@
     }
   ],
   "toc": {
-    "startWeek": 5,
+    "startWeek": 1,
     "note": "Brackets at the start of startWeek. Each week the lowest N survival scores are demoted and the lowest M revival scores are eliminated, with N and M taken from the commissioner's Survivor Rules timeline (demotions / eliminations, default 1).",
     "survival": [
       "mcnutton",
@@ -44,45 +44,19 @@
       "Gusbuster93",
       "zswalker5",
       "Urman1",
-      "gpryce"
-    ],
-    "revival": [
+      "gpryce",
       "Ramathorne",
       "WAFFT",
       "geojag",
-      "Snaggler7"
+      "Snaggler7",
+      "VanceGarren28",
+      "zcamloh11"
     ],
-    "eliminated": [
-      {
-        "owner": "VanceGarren28",
-        "total": 273.53
-      },
-      {
-        "owner": "zcamloh11",
-        "total": 571.93
-      }
-    ],
-    "cumBefore": {
-      "mcnutton": 709.84,
-      "Losmika": 680.97,
-      "HereForBeeerr": 679.63,
-      "MoHegazy": 661.73,
-      "bhatman8": 661.62,
-      "AdithyaGowda": 652.19,
-      "eatmycakes21": 634.63,
-      "Brentlee93": 622.22,
-      "JackEureka": 599.96,
-      "ajd12": 595.91,
-      "Gusbuster93": 592.17,
-      "zswalker5": 591.32,
-      "Urman1": 584.14,
-      "gpryce": 564.29,
-      "Ramathorne": 582.61,
-      "WAFFT": 539.95,
-      "geojag": 533.57,
-      "Snaggler7": 522.77
-    },
+    "revival": [],
+    "eliminated": [],
+    "cumBefore": {},
     "demotions": {
+      "1": 0,
       "2": 2,
       "3": 2,
       "4": 2,
@@ -101,6 +75,7 @@
       "17": 0
     },
     "eliminations": {
+      "1": 0,
       "3": 1,
       "4": 1,
       "5": 1,

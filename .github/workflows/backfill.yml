@@ -1,0 +1,44 @@
+name: Backfill ToC weeks (report only)
+
+# Replays the ToC from Week 1 with real Sleeper data and saves a report to this branch.
+# It never publishes the site and never touches the live deployment.
+on:
+  push:
+    branches: ['backfill/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backfill-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run scoring tests
+        run: node --test tests/scoring.test.mjs
+
+      - name: Pull Sleeper data and replay the ToC
+        run: node scripts/build-data.mjs
+
+      - name: Build the backfill report
+        run: |
+          mkdir -p reports
+          node scripts/backfill-report.mjs public/data.json tests/week5-state.json > reports/backfill.json
+
+      - name: Save the report to this branch
+        run: |
+          git config user.name "toc-hub-bot" && git config user.email "actions@users.noreply.github.com"
+          git add reports/backfill.json
+          if git diff --cached --quiet; then echo "No change"; else
+            git commit -q -m "Backfill report $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push -q origin HEAD:${{ github.ref_name }}
+          fi
