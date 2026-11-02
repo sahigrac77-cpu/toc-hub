@@ -55,11 +55,13 @@
     "eliminated": [
       {
         "owner": "VanceGarren28",
-        "total": 273.53
+        "total": 273.53,
+        "week": 3
       },
       {
         "owner": "zcamloh11",
-        "total": 571.93
+        "total": 571.93,
+        "week": 4
       }
     ],
     "cumBefore": {
