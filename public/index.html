@@ -107,6 +107,7 @@ html{color-scheme:light}body{margin:0}
 </header>
 <nav class="tabs" role="tablist" aria-label="Sections">
   <button role="tab" data-t="toc">ToC</button>
+  <button role="tab" data-t="totals">ToC totals</button>
   <button role="tab" data-t="leagues">Sub-leagues</button>
   <button role="tab" data-t="power">League power rankings</button>
   <button role="tab" data-t="spower">Survival power rankings</button>
@@ -117,6 +118,7 @@ html{color-scheme:light}body{margin:0}
 </nav>
 
 <section class="view" id="v-toc"></section>
+<section class="view" id="v-totals" hidden></section>
 <section class="view" id="v-leagues" hidden></section>
 <section class="view" id="v-awards" hidden></section>
 <section class="view" id="v-teams" hidden></section>
@@ -417,8 +419,39 @@ function renderSPower(){
   <div class="tablebox"><table><thead><tr><th class="n">#</th><th>Team</th><th>Grade</th><th class="n">Score</th><th class="n">ToC wk ${ws[ws.length-1]}</th><th>Description and reasoning</th></tr></thead><tbody>${body}</tbody></table></div>${gradeLegend}`;
 }
 
+/* ---------- ToC totals ---------- */
+/* One simple list: every ToC team's running total and whether it is still alive. Uses the same data as the ToC tab. */
+function renderTotals(){
+  const T = D.toc, el = $('#v-totals');
+  const ws = Object.keys(T.weeks).map(Number).sort((a,b)=>a-b);
+  if(!ws.length){ el.innerHTML = `<h2>ToC totals</h2><p class="lede">The first ToC week (Week ${T.startWeek}) has not been played yet.</p>`; return; }
+  const lastW = ws[ws.length-1], W = T.weeks[lastW];
+  const live = !W.final && !W.preview;
+  const info = {}; (D.standings||[]).forEach(x=>{ info[x.owner] = x; });
+  const out = new Set(T.eliminated.map(e=>e.owner));
+  // Teams in the latest week's brackets that have not been eliminated yet. A team that is only
+  // at the bottom of a week still being played counts as alive until that week is final.
+  const alive = [...W.survival, ...W.revival].filter(r=>!gone(r.owner)).map(r=>({owner:r.owner, league:r.league, total:r.total, bracket:r.bracket}))
+    .sort((a,b)=>b.total-a.total);
+  function gone(o){ return out.has(o); }
+  const dead = T.eliminated.map(e=>({owner:e.owner, league:(info[e.owner]||{}).league||'', total:e.total, week:e.week, provisional:e.provisional}))
+    .sort((a,b)=>(b.week||0)-(a.week||0) || b.total-a.total);
+  const own = o => `<td class="tm${o===ME?' me':''}">${esc(o)}</td>`;
+  const aliveRows = alive.map((r,i)=>`<tr><td class="n">${i+1}</td>${own(r.owner)}<td class="n">${f2(r.total)}</td><td><span class="chip ${r.bracket==='survival'?'good':'warn'}">Alive · ${r.bracket}</span></td><td>${esc(r.league)}</td></tr>`).join('');
+  const deadRows = dead.map(r=>`<tr><td class="n">—</td>${own(r.owner)}<td class="n">${f2(r.total)}</td><td><span class="chip bad">${r.week?'Out in Week '+r.week:'Eliminated'}</span>${r.provisional?' <span class="chip warn">provisional</span>':''}</td><td>${esc(r.league)}</td></tr>`).join('');
+  const head = '<colgroup><col style="width:40px"><col style="width:150px"><col style="width:110px"><col style="width:210px"><col></colgroup><thead><tr><th class="n">#</th><th>Team</th><th class="n">Total points</th><th>Status</th><th>Sub-league</th></tr></thead>';
+  el.innerHTML = `
+  <h2>ToC totals <span class="chip">${alive.length} alive · ${dead.length} eliminated</span></h2>
+  <p class="lede">Each team’s best-ball points added up across every ToC week it has played. Eliminated teams keep the total they had when they went out.${live?` <b>Includes Week ${lastW} so far</b>, so these totals move as games are played. This page checks for fresh data every 5 minutes.`:''}</p>
+  <h2>Still alive</h2>
+  <div class="tablebox"><table style="table-layout:fixed;min-width:640px">${head}<tbody>${aliveRows||'<tr><td colspan="5">No teams left.</td></tr>'}</tbody></table></div>
+  <h2>Eliminated</h2>
+  <div class="tablebox"><table style="table-layout:fixed;min-width:640px">${head}<tbody>${deadRows||'<tr><td colspan="5">Nobody has been eliminated yet.</td></tr>'}</tbody></table></div>
+  <p class="note">Weekly scores decide who drops, not the running total. The ToC tab shows each week’s lineups and who is at risk.</p>`;
+}
+
 /* ---------- Tabs, theme, load ---------- */
-const R = {toc:renderToc,leagues:renderLeagues,awards:renderAwards,teams:()=>renderTeams(''),bylaws:renderBylaws,power:renderPower,spower:renderSPower};
+const R = {toc:renderToc,totals:renderTotals,leagues:renderLeagues,awards:renderAwards,teams:()=>renderTeams(''),bylaws:renderBylaws,power:renderPower,spower:renderSPower};
 const done = {};
 function show(t){
   if(!R[t]) t='toc';
