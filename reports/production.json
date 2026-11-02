@@ -1,0 +1,243 @@
+{
+ "generatedAt": "2026-11-02T12:08:19.282Z",
+ "nflWeek": 8,
+ "startWeek": 5,
+ "latestToCWeek": 8,
+ "eliminated": [
+  {
+   "owner": "VanceGarren28",
+   "total": 273.53
+  },
+  {
+   "owner": "zcamloh11",
+   "total": 571.93
+  },
+  {
+   "owner": "WAFFT",
+   "total": 708.89,
+   "week": 5,
+   "provisional": true,
+   "league": "Redzone Royalty",
+   "team": "WAFFT"
+  },
+  {
+   "owner": "Ramathorne",
+   "total": 915.02,
+   "week": 6,
+   "provisional": true,
+   "league": "Pocket Presence",
+   "team": ""
+  },
+  {
+   "owner": "gpryce",
+   "total": 902.17,
+   "week": 6,
+   "provisional": true,
+   "league": "Up The Ante",
+   "team": "Bunch of Scrubs"
+  },
+  {
+   "owner": "Snaggler7",
+   "total": 1024.17,
+   "week": 7,
+   "provisional": true,
+   "league": "Up The Ante",
+   "team": "Snaggler7"
+  },
+  {
+   "owner": "Urman1",
+   "total": 1025.12,
+   "week": 7,
+   "provisional": true,
+   "league": "Blitzkrieg",
+   "team": ""
+  }
+ ],
+ "survivalNow": [
+  "mcnutton",
+  "Losmika",
+  "HereForBeeerr",
+  "MoHegazy",
+  "AdithyaGowda",
+  "eatmycakes21",
+  "Brentlee93",
+  "ajd12",
+  "Gusbuster93",
+  "zswalker5"
+ ],
+ "revivalNow": [
+  "geojag",
+  "JackEureka",
+  "bhatman8"
+ ],
+ "totalNow": {
+  "MoHegazy": 1437.98,
+  "eatmycakes21": 1493.84,
+  "Gusbuster93": 1370.33,
+  "ajd12": 1463.14,
+  "Brentlee93": 1390.72,
+  "mcnutton": 1458.27,
+  "zswalker5": 1333.69,
+  "AdithyaGowda": 1369.63,
+  "Losmika": 1494.99,
+  "bhatman8": 1468.12,
+  "HereForBeeerr": 1407.56,
+  "Urman1": 1025.12,
+  "gpryce": 902.17,
+  "JackEureka": 1399.29,
+  "Snaggler7": 1024.17,
+  "Ramathorne": 915.02,
+  "geojag": 1166.48,
+  "WAFFT": 708.89
+ },
+ "weekly": {
+  "MoHegazy": {
+   "5": 275.38,
+   "6": 168.94,
+   "7": 170.6,
+   "8": 170.07
+  },
+  "eatmycakes21": {
+   "5": 270.72,
+   "6": 178.39,
+   "7": 214.28,
+   "8": 214.17
+  },
+  "Gusbuster93": {
+   "5": 250.7,
+   "6": 141.17,
+   "7": 203.21,
+   "8": 246.97
+  },
+  "ajd12": {
+   "5": 241.03,
+   "6": 178.22,
+   "7": 190.58,
+   "8": 257.4
+  },
+  "Brentlee93": {
+   "5": 225.2,
+   "6": 178.05,
+   "7": 214.09,
+   "8": 169.51
+  },
+  "mcnutton": {
+   "5": 219.68,
+   "6": 137.38,
+   "7": 211.99,
+   "8": 179.38
+  },
+  "zswalker5": {
+   "5": 203.66,
+   "6": 170.15,
+   "7": 189.77,
+   "8": 197.14
+  },
+  "AdithyaGowda": {
+   "5": 186.85,
+   "6": 199.42,
+   "7": 175.51,
+   "8": 174.6
+  },
+  "Losmika": {
+   "5": 180.13,
+   "6": 225.26,
+   "7": 236.75,
+   "8": 197.59
+  },
+  "bhatman8": {
+   "5": 178.71,
+   "6": 240.47,
+   "7": 169.22,
+   "8": 218.1
+  },
+  "HereForBeeerr": {
+   "5": 163.53,
+   "6": 177.5,
+   "7": 179.18,
+   "8": 207.72
+  },
+  "Urman1": {
+   "5": 162.76,
+   "6": 129.19,
+   "7": 149.03
+  },
+  "gpryce": {
+   "5": 160.45,
+   "6": 177.43
+  },
+  "JackEureka": {
+   "5": 154.62,
+   "6": 203.43,
+   "7": 237.49,
+   "8": 235.64
+  },
+  "Snaggler7": {
+   "5": 194.22,
+   "6": 180.04,
+   "7": 127.14
+  },
+  "Ramathorne": {
+   "5": 177.95,
+   "6": 154.46
+  },
+  "geojag": {
+   "5": 171.41,
+   "6": 189.83,
+   "7": 170.74,
+   "8": 108.04
+  },
+  "WAFFT": {
+   "5": 168.94
+  }
+ },
+ "events": [
+  {
+   "week": 5,
+   "status": "stands",
+   "final": true,
+   "demoted": [
+    "JackEureka",
+    "gpryce"
+   ],
+   "eliminated": [
+    "WAFFT"
+   ]
+  },
+  {
+   "week": 6,
+   "status": "provisional",
+   "final": true,
+   "demoted": [
+    "Urman1"
+   ],
+   "eliminated": [
+    "Ramathorne",
+    "gpryce"
+   ]
+  },
+  {
+   "week": 7,
+   "status": "provisional",
+   "final": true,
+   "demoted": [
+    "bhatman8"
+   ],
+   "eliminated": [
+    "Snaggler7",
+    "Urman1"
+   ]
+  },
+  {
+   "week": 8,
+   "status": "live",
+   "final": false,
+   "demoted": [
+    "Brentlee93"
+   ],
+   "eliminated": [
+    "geojag"
+   ]
+  }
+ ]
+}
