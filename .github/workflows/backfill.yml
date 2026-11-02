@@ -34,10 +34,21 @@ jobs:
           mkdir -p reports
           node scripts/backfill-report.mjs public/data.json tests/week5-state.json > reports/backfill.json
 
-      - name: Save the report to this branch
+      # Same build the live site runs (the league's accepted Week 5 start), so eliminations since Week 5 are the real ones.
+      - name: Replay with the league's accepted Week 5 state
+        run: |
+          git fetch --depth=1 origin main
+          cp config.json /tmp/config.backfill.json
+          git show origin/main:config.json > config.json
+          mkdir -p /tmp/prod
+          OUT_FILE=/tmp/prod/data.json RAW_OUT=/tmp/prod/raw.json node scripts/build-data.mjs
+          cp /tmp/config.backfill.json config.json
+          node scripts/prod-report.mjs /tmp/prod/data.json > reports/production.json
+
+      - name: Save the reports to this branch
         run: |
           git config user.name "toc-hub-bot" && git config user.email "actions@users.noreply.github.com"
-          git add reports/backfill.json
+          git add reports/backfill.json reports/production.json
           if git diff --cached --quiet; then echo "No change"; else
             git commit -q -m "Backfill report $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             git push -q origin HEAD:${{ github.ref_name }}
