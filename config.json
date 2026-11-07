@@ -29,7 +29,7 @@
   ],
   "toc": {
     "startWeek": 5,
-    "note": "Brackets at the start of startWeek. Each week the lowest N survival scores are demoted and the lowest M revival scores are eliminated, with N and M taken from the Survivor Rules timeline in the bylaws document (demotions / eliminations, default 1). Weeks 9-16 follow the document as of 2026-11-07. Its survival team counts were not updated for those demotion numbers (demoting 2 in Weeks 9-12 leaves survival with 1 team after Week 12), so the site never demotes the last survival team.",
+    "note": "Brackets at the start of startWeek. Each week the lowest N survival scores are demoted and the lowest M revival scores are eliminated, with N and M taken from the 'teams demoted' cells of the Survivor Rules timeline in the bylaws document (demotions / eliminations, default 1). The document's 'teams compete' counts are known to be inaccurate and are ignored. The last team left in a bracket is never cut: it is that bracket's champion.",
     "survival": [
       "mcnutton",
       "Losmika",
