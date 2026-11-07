@@ -29,7 +29,7 @@
   ],
   "toc": {
     "startWeek": 5,
-    "note": "Brackets at the start of startWeek. Each week the lowest N survival scores are demoted and the lowest M revival scores are eliminated, with N and M taken from the commissioner's Survivor Rules timeline (demotions / eliminations, default 1).",
+    "note": "Brackets at the start of startWeek. Each week the lowest N survival scores are demoted and the lowest M revival scores are eliminated, with N and M taken from the Survivor Rules timeline in the bylaws document (demotions / eliminations, default 1). As of 2026-11-07 the document says Week 5 demoted 1 team and Week 7 eliminates 1, but its survival team counts were not updated, so it ends Week 16 with 2 survival teams instead of 1.",
     "survival": [
       "mcnutton",
       "Losmika",
@@ -88,7 +88,7 @@
       "2": 2,
       "3": 2,
       "4": 2,
-      "5": 2,
+      "5": 1,
       "6": 1,
       "7": 1,
       "8": 1,
@@ -107,7 +107,7 @@
       "4": 1,
       "5": 1,
       "6": 2,
-      "7": 2,
+      "7": 1,
       "8": 1,
       "9": 1,
       "10": 1,
