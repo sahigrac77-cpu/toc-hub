@@ -1098,5 +1098,20 @@
    9
   ],
   "why": "data changed and >= 6h since last"
+ },
+ {
+  "file": "snapshots/2026-11-17/060407Z.json.gz",
+  "at": "2026-11-17T06:04:07.543Z",
+  "sha": "cffb4c3ce08eb2ccfce86c2c866bfe2707d3aefb278d0600a87a84adfc070f09",
+  "nflWeek": 11,
+  "finalWeeks": [
+   5,
+   6,
+   7,
+   8,
+   9,
+   10
+  ],
+  "why": "a week became final"
  }
 ]
