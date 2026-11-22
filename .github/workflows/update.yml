@@ -24,7 +24,7 @@ jobs:
       VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.retry1.outputs.page_url || steps.retry2.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -65,8 +65,29 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public
+      # GitHub sometimes reports "no artifacts found" a moment after a good upload. Retry twice before giving up.
       - id: deployment
         uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - name: Wait before Pages retry 1
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 20
+      - id: retry1
+        if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - name: Wait before Pages retry 2
+        if: steps.deployment.outcome == 'failure' && steps.retry1.outcome == 'failure'
+        run: sleep 45
+      - id: retry2
+        if: steps.deployment.outcome == 'failure' && steps.retry1.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - name: Fail if Pages never deployed
+        if: steps.deployment.outcome == 'failure' && steps.retry1.outcome == 'failure' && steps.retry2.outcome == 'failure'
+        run: |
+          echo "Pages deploy failed after 3 attempts"
+          exit 1
 
       # Ask Vercel to rebuild so its copy of the site is fresh too. Skipped unless the VERCEL_DEPLOY_HOOK secret exists.
       # On scheduled runs it fires at most about once an hour (Vercel's free plan allows 100 deployments a day).
